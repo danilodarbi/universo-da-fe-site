@@ -1034,10 +1034,18 @@ h1,h2,h3{ font-family: var(--serif); font-weight: 500; line-height: 1.04; letter
       <a href="#" class="link-underline" data-reveal="" data-reveal-d="2">Ver mais vendidos <span class="arrow">→</span></a>
     </div>
     <div class="prod-grid" id="shopify-prod-grid">
-      <div class="prod-loading" style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--muted);">
-        <div style="font-family:var(--serif);font-size:22px;color:var(--navy);margin-bottom:8px;">Carregando produtos…</div>
-        <div style="font-size:14px;">Buscando catálogo</div>
+      <div style="grid-column:1/-1;text-align:center;padding:80px 20px;">
+        <div class="serif" style="font-size:22px;color:var(--navy);margin-bottom:8px;">Carregando produtos…</div>
       </div>
+    </div>
+        <div class="prod-info">
+          <span class="cat-tag">Devocional</span>
+          <div class="name">Imitação de Cristo · Capa Linho</div>
+          <div class="price-row"><span class="price">R$ 69,90</span></div>
+          <span class="inst">ou 2x de R$ 34,95 sem juros</span>
+        </div>
+      </article>
+
     </div>
   </div>
 </section>
@@ -1063,9 +1071,16 @@ h1,h2,h3{ font-family: var(--serif); font-weight: 500; line-height: 1.04; letter
       <a href="#" class="link-underline" data-reveal="" data-reveal-d="2">Ver todos os kits <span class="arrow">→</span></a>
     </div>
     <div class="kits" id="shopify-kits-grid">
-      <div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--muted);">
-        <div style="font-family:var(--serif);font-size:20px;color:var(--navy);">Carregando kits…</div>
+      <div style="grid-column:1/-1;text-align:center;padding:40px 20px;">
+        <div class="serif" style="font-size:20px;color:var(--navy);">Carregando…</div>
       </div>
+    </div>
+        <div class="kit-body">
+          <h3 class="serif">Kit Primeira Comunhão</h3>
+          <p>Terço, devocional ilustrado e lembrança especial para a criança.</p>
+          <div class="price-row"><span class="price">R$ 179,90</span><button class="link-underline" data-add="">Adicionar <span class="arrow">→</span></button></div>
+        </div>
+      </article>
     </div>
   </div>
 </section>
@@ -1307,111 +1322,105 @@ h1,h2,h3{ font-family: var(--serif); font-weight: 500; line-height: 1.04; letter
   </div>
 </div>
 
-<script src="data:application/javascript;base64,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"></script>
+<script src="data:application/javascript;base64,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"></script>
 
 
 
 <script>
 /* ============================================================
-   UNIVERSO DA FÉ — Shopify Storefront API Integration
+   UNIVERSO DA FÉ — Shopify Storefront API Integration v2
    ============================================================ */
 (function(){
   'use strict';
 
-  const SHOPIFY = {
+  const CFG = {
     store: 'sthtec-5u.myshopify.com',
     token: 'ea35083dcd9c5aecfa1930335fe1bc62',
     version: '2025-07'
   };
-
   const WA = '5527999999999';
   const BRL = n => 'R$ ' + n.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
   let allProducts = [];
 
-  /* ---- API ---- */
-  async function shopifyFetch(query, variables = {}) {
-    const res = await fetch(`https://${SHOPIFY.store}/api/${SHOPIFY.version}/graphql.json`, {
+  /* ── API ── */
+  async function shopifyFetch(query) {
+    const res = await fetch(`https://${CFG.store}/api/${CFG.version}/graphql.json`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Shopify-Storefront-Access-Token': SHOPIFY.token
+        'X-Shopify-Storefront-Access-Token': CFG.token
       },
-      body: JSON.stringify({ query, variables })
+      body: JSON.stringify({ query })
     });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
     if (json.errors) throw new Error(json.errors.map(e => e.message).join(', '));
     return json.data;
   }
 
-  /* ---- Skeleton ---- */
-  function skeleton(n) {
-    return Array(n).fill(`
-      <article class="prod" style="opacity:1">
-        <div class="prod-media" style="background:linear-gradient(135deg,#f5f0e8,#ede8de);aspect-ratio:3/4;border-radius:12px;animation:pulse 1.5s infinite;"></div>
-        <div class="prod-info">
-          <div style="height:12px;background:#ede8de;border-radius:4px;width:40%;margin-bottom:8px;animation:pulse 1.5s infinite;"></div>
-          <div style="height:18px;background:#ede8de;border-radius:4px;width:80%;margin-bottom:8px;animation:pulse 1.5s infinite;"></div>
-          <div style="height:16px;background:#ede8de;border-radius:4px;width:50%;animation:pulse 1.5s infinite;"></div>
+  /* ── Skeletons ── */
+  function skeleton(n, cls) {
+    return Array(n).fill(0).map(() => `
+      <article class="${cls}" style="opacity:1;pointer-events:none">
+        <div style="background:linear-gradient(135deg,#f5f0e8,#ede8de);aspect-ratio:3/4;border-radius:12px;animation:_udfpulse 1.4s infinite;"></div>
+        <div style="padding:12px 0">
+          <div style="height:10px;background:#ede8de;border-radius:4px;width:35%;margin-bottom:10px;animation:_udfpulse 1.4s infinite;"></div>
+          <div style="height:16px;background:#ede8de;border-radius:4px;width:80%;margin-bottom:8px;animation:_udfpulse 1.4s infinite;"></div>
+          <div style="height:14px;background:#ede8de;border-radius:4px;width:45%;animation:_udfpulse 1.4s infinite;"></div>
         </div>
       </article>`).join('');
   }
 
-  /* ---- Product card HTML ---- */
+  /* ── Product card ── */
   function prodCard(p, delay) {
     const img = p.image
-      ? `<img src="${p.image}" alt="${p.title}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
+      ? `<img src="${p.image}" alt="${p.title.replace(/"/g,"'")}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;">`
       : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:3rem;color:var(--gold);">✝</div>`;
-
     const badge = p.tag ? `<span class="prod-tag gold">${p.tag}</span>` : '';
-    const compare = p.compareAtPrice && p.compareAtPrice > p.price
+    const compare = (p.compareAtPrice && p.compareAtPrice > p.price)
       ? `<span class="old">${BRL(p.compareAtPrice)}</span>` : '';
-    const parcela = Math.ceil(p.price / 3);
+    const parcela = BRL(Math.ceil(p.price / 3));
     const available = p.available !== false;
 
-    return `
-      <article class="prod" data-product="" data-id="${p.id}"
-        data-variant="${p.variantId}" data-name="${p.title}"
-        data-price="${p.price}" data-img="${p.image || ''}" data-reveal=""
-        ${delay ? `data-reveal-d="${delay}"` : ''}>
+    return `<article class="prod" data-product=""
+        data-id="${p.id}" data-variant="${p.variantId}"
+        data-name="${p.title.replace(/"/g,"'")}"
+        data-price="${p.price}" data-img="${p.image || ''}" data-reveal="">
         <div class="prod-media">
           ${badge}
           <button class="prod-fav" aria-label="Favoritar">
-            <svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.5-9C1 8.5 2.5 5 6 5c2 0 3.2 1.2 4 2.4C10.8 6.2 12 5 14 5c3.5 0 5 3.5 3.5 7-2.5 4.5-9.5 9-9.5 9Z"></path></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.5-9C1 8.5 2.5 5 6 5c2 0 3.2 1.2 4 2.4C10.8 6.2 12 5 14 5c3.5 0 5 3.5 3.5 7-2.5 4.5-9.5 9-9.5 9Z"/></svg>
           </button>
-          <div style="width:100%;height:100%;">${img}</div>
-          <button class="prod-add" data-add="${available ? '' : 'disabled'}"
-            ${!available ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>
-            ${available ? 'Adicionar ao carrinho' : 'Indisponível'}
-          </button>
+          <div class="prod-media-inner" style="width:100%;height:100%;">${img}</div>
+          ${available
+            ? `<button class="prod-add" data-add="">Adicionar ao carrinho</button>`
+            : `<button class="prod-add" style="opacity:.5;cursor:not-allowed" disabled>Indisponível</button>`}
         </div>
         <div class="prod-info">
           <span class="cat-tag">${p.type || 'Artigo Católico'}</span>
           <div class="name">${p.title}</div>
           <div class="price-row">
-            <span class="price">${BRL(p.price)}</span>
-            ${compare}
+            <span class="price">${BRL(p.price)}</span>${compare}
           </div>
-          <span class="inst">ou 3x de ${BRL(parcela)} sem juros</span>
+          <span class="inst">ou 3x de ${parcela} sem juros</span>
         </div>
       </article>`;
   }
 
-  /* ---- Kit card HTML ---- */
-  function kitCard(p, delay) {
+  /* ── Kit card ── */
+  function kitCard(p) {
     const img = p.image
-      ? `<img src="${p.image}" alt="${p.title}" loading="lazy">`
+      ? `<img src="${p.image}" alt="${p.title.replace(/"/g,"'")}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
       : `<div style="display:flex;align-items:center;justify-content:center;height:200px;font-size:3rem;">✝</div>`;
-
-    return `
-      <article class="kit" data-product="" data-id="${p.id}"
-        data-variant="${p.variantId}" data-name="${p.title}"
-        data-price="${p.price}" data-img="${p.image || ''}" data-reveal=""
-        ${delay ? `data-reveal-d="${delay}"` : ''}>
+    return `<article class="kit" data-product=""
+        data-id="${p.id}" data-variant="${p.variantId}"
+        data-name="${p.title.replace(/"/g,"'")}"
+        data-price="${p.price}" data-img="${p.image || ''}" data-reveal="">
         <div class="frame">${img}</div>
         <div class="kit-body">
           <h3 class="serif">${p.title}</h3>
-          <p>${(p.description || '').slice(0, 80)}${p.description && p.description.length > 80 ? '…' : ''}</p>
+          <p>${(p.description || '').slice(0,90)}${p.description && p.description.length > 90 ? '…' : ''}</p>
           <div class="price-row">
             <span class="price">${BRL(p.price)}</span>
             <button class="link-underline" data-add="">Adicionar <span class="arrow">→</span></button>
@@ -1420,38 +1429,30 @@ h1,h2,h3{ font-family: var(--serif); font-weight: 500; line-height: 1.04; letter
       </article>`;
   }
 
-  /* ---- Bind add-to-cart on newly rendered cards ---- */
-  function bindAddToCart(container) {
-    container.querySelectorAll('[data-add]').forEach(btn => {
-      if (btn.hasAttribute('data-bound')) return;
-      btn.setAttribute('data-bound', '1');
-      btn.addEventListener('click', e => {
-        e.preventDefault();
-        if (btn.disabled) return;
-        const card = btn.closest('[data-product]');
-        if (!card) return;
-        // Use the existing addToCart from the original JS via custom event
-        const ev = new CustomEvent('udf:addtocart', {
-          detail: {
-            id: card.dataset.id,
-            name: card.dataset.name,
-            price: parseFloat(card.dataset.price),
-            img: card.dataset.img || '',
-            variantId: card.dataset.variant || ''
-          }
-        });
-        document.dispatchEvent(ev);
+  /* ── Bind add-to-cart via event delegation on container ── */
+  function bindContainer(container) {
+    container.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-add]');
+      if (!btn || btn.disabled) return;
+      e.preventDefault();
+      const card = btn.closest('[data-product]');
+      if (!card || !window._udf) return;
+      window._udf.addToCart({
+        id: card.dataset.id,
+        name: card.dataset.name,
+        price: parseFloat(card.dataset.price),
+        img: card.dataset.img || '',
+        variantId: card.dataset.variant || ''
       });
     });
   }
 
-  /* ---- Load products ---- */
+  /* ── Load products ── */
   async function loadProducts() {
     const grid = document.getElementById('shopify-prod-grid');
     const kitsGrid = document.getElementById('shopify-kits-grid');
-
-    if (grid) grid.innerHTML = skeleton(4);
-    if (kitsGrid) kitsGrid.innerHTML = skeleton(3);
+    if (grid) grid.innerHTML = skeleton(4, 'prod');
+    if (kitsGrid) kitsGrid.innerHTML = skeleton(3, 'kit');
 
     try {
       const data = await shopifyFetch(`{
@@ -1484,138 +1485,115 @@ h1,h2,h3{ font-family: var(--serif); font-weight: 500; line-height: 1.04; letter
           variantId: v?.id || '',
           available: v?.availableForSale !== false,
           image: img?.url || null,
-          tag: p.tags.includes('mais-vendido') || p.tags.includes('destaque') ? 'Mais vendido' :
-               p.tags.includes('novo') ? 'Novo' : null
+          tag: (p.tags.includes('mais-vendido') || p.tags.includes('destaque')) ? 'Mais vendido'
+             : p.tags.includes('novo') ? 'Novo' : null
         };
       });
 
-      // Main products grid (first 8, excluding kits)
-      const mainProds = allProducts.filter(p =>
-        !p.type.toLowerCase().includes('kit') && !p.tags.includes('kit')
-      ).slice(0, 8);
-
-      // Kits
-      const kitProds = allProducts.filter(p =>
-        p.type.toLowerCase().includes('kit') || p.tags.includes('kit')
-      ).slice(0, 3);
-
-      // Fallback: if no kits tagged, take last 3 products
+      const kitProds  = allProducts.filter(p => p.type.toLowerCase().includes('kit') || p.tags.includes('kit')).slice(0, 3);
+      const mainProds = allProducts.filter(p => !p.type.toLowerCase().includes('kit') && !p.tags.includes('kit')).slice(0, 8);
       const kitsToShow = kitProds.length ? kitProds : allProducts.slice(-3);
       const mainToShow = mainProds.length ? mainProds : allProducts.slice(0, 8);
 
       if (grid) {
-        grid.innerHTML = mainToShow.map((p, i) => prodCard(p, i > 0 ? Math.min(i, 3) : 0)).join('');
-        bindAddToCart(grid);
-        // Re-observe reveal animations
-        if (window._udfRevealObserver) {
+        grid.innerHTML = mainToShow.length
+          ? mainToShow.map(p => prodCard(p)).join('')
+          : `<div style="grid-column:1/-1;text-align:center;padding:60px 20px">
+              <div class="serif" style="font-size:22px;color:var(--navy);margin-bottom:8px;">Nenhum produto encontrado</div>
+              <p style="color:var(--muted)">Verifique os filtros ou tente novamente.</p>
+             </div>`;
+        bindContainer(grid);
+        if (window._udfRevealObserver)
           grid.querySelectorAll('[data-reveal]').forEach(el => window._udfRevealObserver.observe(el));
-        }
       }
 
       if (kitsGrid) {
-        kitsGrid.innerHTML = kitsToShow.map((p, i) => kitCard(p, i)).join('');
-        bindAddToCart(kitsGrid);
-        if (window._udfRevealObserver) {
+        kitsGrid.innerHTML = kitsToShow.length
+          ? kitsToShow.map(p => kitCard(p)).join('')
+          : `<div style="grid-column:1/-1;text-align:center;padding:40px 20px">
+              <div class="serif" style="font-size:20px;color:var(--navy);">Em breve</div>
+             </div>`;
+        bindContainer(kitsGrid);
+        if (window._udfRevealObserver)
           kitsGrid.querySelectorAll('[data-reveal]').forEach(el => window._udfRevealObserver.observe(el));
-        }
       }
 
     } catch (err) {
-      console.error('Shopify load error:', err);
+      console.error('[UDF] Shopify load error:', err);
       if (grid) grid.innerHTML = `
-        <div style="grid-column:1/-1;text-align:center;padding:48px 20px;">
-          <div style="font-family:var(--serif);font-size:22px;color:var(--navy);margin-bottom:8px;">
-            Não foi possível carregar os produtos
-          </div>
-          <p style="color:var(--muted);margin-bottom:20px;">Verifique sua conexão e tente novamente.</p>
-          <button class="btn btn-primary" onclick="loadProducts()">Tentar novamente</button>
+        <div style="grid-column:1/-1;text-align:center;padding:60px 20px">
+          <div class="serif" style="font-size:22px;color:var(--navy);margin-bottom:8px;">Não foi possível carregar os produtos</div>
+          <p style="color:var(--muted);margin-bottom:20px;">Erro: ${err.message}</p>
+          <button class="btn btn-primary" onclick="window._udfLoadProducts()">Tentar novamente</button>
         </div>`;
     }
   }
 
-  /* ---- Shopify Checkout ---- */
+  /* ── Shopify Checkout ── */
   window.startShopifyCheckout = async function() {
-    const cartData = JSON.parse(localStorage.getItem('udf_cart_v1') || '[]');
-    if (!cartData.length) return;
+    const cart = JSON.parse(localStorage.getItem('udf_cart_v1') || '[]');
+    if (!cart.length) return;
 
-    const btn = document.getElementById('shopify-checkout-btn');
+    // Find the checkout button to disable it
+    const foot = document.getElementById('cart-foot');
+    const btn = foot?.querySelector('.btn-primary');
     if (btn) { btn.textContent = 'Criando pedido…'; btn.disabled = true; }
 
     try {
-      const lineItems = cartData.map(i => ({
-        variantId: i.variantId,
-        quantity: i.qty
-      })).filter(i => i.variantId);
+      const lineItems = cart.map(item => {
+        const found = allProducts.find(p => p.id === item.id);
+        const variantId = item.variantId || found?.variantId;
+        return variantId ? { variantId, quantity: item.qty } : null;
+      }).filter(Boolean);
 
-      if (!lineItems.length) {
-        // Fallback: try to find variant IDs from loaded products
-        const lineItemsFallback = cartData.map(i => {
-          const found = allProducts.find(p => p.id === i.id);
-          return found ? { variantId: found.variantId, quantity: i.qty } : null;
-        }).filter(Boolean);
-
-        if (!lineItemsFallback.length) throw new Error('Nenhum item com ID de variante');
-        lineItems.push(...lineItemsFallback);
-      }
+      if (!lineItems.length) throw new Error('Nenhum produto com variantId encontrado.');
 
       const data = await shopifyFetch(`
-        mutation CheckoutCreate($input: CheckoutCreateInput!) {
-          checkoutCreate(input: $input) {
+        mutation {
+          checkoutCreate(input: {
+            lineItems: [${lineItems.map(i => `{ variantId: "${i.variantId}", quantity: ${i.quantity} }`).join(', ')}]
+          }) {
             checkout { id webUrl }
             checkoutUserErrors { message }
           }
-        }`, { input: { lineItems } });
+        }
+      `);
 
       const result = data.checkoutCreate;
       if (result.checkoutUserErrors?.length) throw new Error(result.checkoutUserErrors[0].message);
       window.location.href = result.checkout.webUrl;
 
     } catch (err) {
-      console.error('Checkout error:', err);
-      alert('Erro ao criar checkout. Tente via WhatsApp ou recarregue a página.');
+      console.error('[UDF] Checkout error:', err);
+      alert('Erro ao processar checkout: ' + err.message);
       if (btn) { btn.textContent = 'Finalizar compra →'; btn.disabled = false; }
     }
   };
 
-  /* ---- WhatsApp checkout ---- */
+  /* ── WhatsApp checkout ── */
   window.checkoutWhatsApp = function() {
-    const cartData = JSON.parse(localStorage.getItem('udf_cart_v1') || '[]');
-    if (!cartData.length) return;
-    const BRL2 = n => 'R$ ' + n.toFixed(2).replace('.', ',');
-    const lines = cartData.map(i => `${i.qty}x ${i.name} — ${BRL2(i.price * i.qty)}`).join('%0A');
-    const total = cartData.reduce((s,i) => s + i.price * i.qty, 0);
-    const msg = `Olá! Gostaria de finalizar meu pedido:%0A%0A${lines}%0A%0ATotal: ${BRL2(total)}`;
+    const cart = JSON.parse(localStorage.getItem('udf_cart_v1') || '[]');
+    if (!cart.length) return;
+    const items = cart.map(i => `${i.qty}x ${i.name} — ${BRL(i.price * i.qty)}`).join('%0A');
+    const total = BRL(cart.reduce((s, i) => s + i.price * i.qty, 0));
+    const msg = `Olá! Gostaria de finalizar meu pedido:%0A%0A${items}%0A%0ATotal: ${total}`;
     window.open(`https://wa.me/${WA}?text=${msg}`, '_blank');
   };
 
-  /* ---- Listen for addtocart events from dynamically rendered cards ---- */
-  document.addEventListener('udf:addtocart', e => {
-    // Re-use the existing cart system by simulating a click on a data-product element
-    // We inject a temporary element, dispatch the original handler's expected event
-    const detail = e.detail;
-    const tmp = document.createElement('article');
-    tmp.setAttribute('data-product', '');
-    tmp.setAttribute('data-id', detail.id);
-    tmp.setAttribute('data-name', detail.name);
-    tmp.setAttribute('data-price', detail.price);
-    tmp.setAttribute('data-img', detail.img || '');
-    tmp.setAttribute('data-variant', detail.variantId || '');
-    tmp.style.display = 'none';
-    const tmpBtn = document.createElement('button');
-    tmpBtn.setAttribute('data-add', '');
-    tmp.appendChild(tmpBtn);
-    document.body.appendChild(tmp);
-    tmpBtn.click();
-    setTimeout(() => tmp.remove(), 100);
-  });
+  /* ── Expose load function globally for retry button ── */
+  window._udfLoadProducts = loadProducts;
 
-  /* ---- Pulse animation for skeletons ---- */
+  /* ── Pulse animation CSS ── */
   const style = document.createElement('style');
-  style.textContent = `@keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.5 } }`;
+  style.textContent = `@keyframes _udfpulse { 0%,100%{opacity:1} 50%{opacity:.45} }`;
   document.head.appendChild(style);
 
-  /* ---- Init ---- */
-  document.addEventListener('DOMContentLoaded', loadProducts);
+  /* ── Init: safe DOMContentLoaded ── */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadProducts);
+  } else {
+    loadProducts();
+  }
 
 })();
 </script>
