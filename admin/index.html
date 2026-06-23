@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Universo da Fé — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #1a1f3a;
+  --navy-2: #252b4a;
+  --gold: #c9a84c;
+  --gold-light: #e8c96a;
+  --cream: #faf7f2;
+  --ink: #1c1c1c;
+  --muted: #777;
+  --border: #e8e3da;
+  --danger: #c44;
+  --success: #2a9d6a;
+  --warn: #e0a020;
+  --serif: 'Cormorant Garamond', Georgia, serif;
+  --sans: 'Inter', system-ui, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); background: #f5f2ec; color: var(--ink); min-height: 100vh; font-size: 14px; }
+
+/* ───── LOGIN ───── */
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-2) 100%);
+}
+.login-box {
+  background: #fff;
+  border-radius: 16px;
+  padding: 48px 40px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  text-align: center;
+}
+.login-logo { font-size: 2.5rem; color: var(--gold); margin-bottom: 12px; }
+.login-title { font-family: var(--serif); font-size: 1.6rem; color: var(--navy); margin-bottom: 4px; }
+.login-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; letter-spacing: 0.05em; }
+.login-input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--sans);
+  font-size: 15px;
+  outline: none;
+  margin-bottom: 12px;
+  transition: border-color 0.2s;
+}
+.login-input:focus { border-color: var(--gold); }
+.login-btn {
+  width: 100%;
+  background: var(--navy);
+  color: var(--gold);
+  border: none;
+  border-radius: 8px;
+  padding: 14px;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: background 0.2s;
+}
+.login-btn:hover { background: var(--navy-2); }
+.login-error { color: var(--danger); font-size: 12px; margin-top: 12px; }
+
+/* ───── APP SHELL ───── */
+.app { display: none; }
+.app.active { display: block; }
+.topbar {
+  background: var(--navy);
+  color: #fff;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.topbar-brand { display: flex; align-items: center; gap: 12px; font-family: var(--serif); font-size: 1.3rem; }
+.topbar-brand .dot { width: 28px; height: 28px; background: var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--navy); font-weight: 700; }
+.topbar-actions { display: flex; gap: 12px; align-items: center; }
+.topbar-link { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 13px; transition: color 0.2s; }
+.topbar-link:hover { color: var(--gold); }
+.logout-btn { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.8); padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: var(--sans); }
+.logout-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+/* ───── TABS ───── */
+.tabs {
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 0;
+  padding: 0 24px;
+  overflow-x: auto;
+}
+.tab {
+  background: none;
+  border: none;
+  padding: 18px 20px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  white-space: nowrap;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tab.active { color: var(--navy); border-bottom-color: var(--gold); font-weight: 600; }
+.tab:hover:not(.active) { color: var(--ink); }
+.tab-badge { background: #ede8de; color: var(--muted); border-radius: 100px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+.tab.active .tab-badge { background: var(--gold); color: var(--navy); }
+
+/* ───── CONTENT ───── */
+.content { padding: 24px; max-width: 1400px; margin: 0 auto; }
+.panel { display: none; }
+.panel.active { display: block; }
+
+.panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 16px; flex-wrap: wrap; }
+.panel-title { font-family: var(--serif); font-size: 1.7rem; color: var(--navy); font-weight: 500; }
+.panel-sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+.toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.search-input {
+  padding: 10px 14px 10px 38px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--sans);
+  font-size: 13px;
+  outline: none;
+  width: 260px;
+  background: #fff url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat 12px center;
+  transition: border-color 0.2s;
+}
+.search-input:focus { border-color: var(--gold); }
+.btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+.btn-primary { background: var(--navy); color: var(--gold); }
+.btn-primary:hover { background: var(--navy-2); }
+.btn-primary:disabled { background: #ccc; color: #888; cursor: not-allowed; }
+.btn-gold { background: var(--gold); color: var(--navy); }
+.btn-gold:hover { background: var(--gold-light); }
+.btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--border); }
+.btn-ghost:hover { border-color: var(--navy); }
+.btn-danger { background: transparent; color: var(--danger); border: 1px solid #f0c0c0; }
+.btn-danger:hover { background: #fde8e8; }
+
+select.filter-select {
+  padding: 10px 32px 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--sans);
+  font-size: 13px;
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+/* ───── PRODUCT GRID ───── */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+.product-card {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+.product-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); transform: translateY(-2px); }
+.product-card.selected { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.2); }
+.product-card-check {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--border);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.product-card.selected .product-card-check { background: var(--gold); border-color: var(--gold); }
+.product-card.selected .product-card-check::after { content: '✓'; color: var(--navy); font-weight: 700; font-size: 14px; }
+.product-card-img {
+  aspect-ratio: 1;
+  background: var(--cream);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+.product-card-img img { width: 100%; height: 100%; object-fit: cover; }
+.product-card-noimg { font-size: 2.5rem; color: rgba(201,168,76,0.3); }
+.product-card-info { padding: 12px; }
+.product-card-type { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); font-weight: 600; margin-bottom: 4px; }
+.product-card-title { font-family: var(--serif); font-size: 14px; line-height: 1.3; color: var(--navy); margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.product-card-price { font-size: 13px; color: var(--navy); font-weight: 700; }
+.product-card-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 100px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  z-index: 2;
+}
+.product-card-badge.warn { background: var(--warn); }
+.product-card-badge.success { background: var(--success); }
+
+/* ───── BULK BAR ───── */
+.bulk-bar {
+  position: sticky;
+  top: 56px;
+  background: var(--navy);
+  color: #fff;
+  padding: 14px 20px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 10;
+  flex-wrap: wrap;
+}
+.bulk-bar.active { display: flex; }
+.bulk-info { font-size: 13px; display: flex; align-items: center; gap: 8px; }
+.bulk-info strong { color: var(--gold); font-size: 15px; }
+.bulk-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ───── MODAL EDITOR ───── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,18,37,0.6);
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: #fff;
+  border-radius: 16px;
+  max-width: 900px;
+  width: 100%;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.3);
+}
+.modal-head {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 1;
+}
+.modal-head-title { font-family: var(--serif); font-size: 1.4rem; color: var(--navy); }
+.modal-close {
+  background: var(--cream);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+}
+.modal-body { padding: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 740px) { .modal-body { grid-template-columns: 1fr; } }
+
+.field { margin-bottom: 18px; }
+.field-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+}
+.field-input, .field-textarea, .field-select {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--sans);
+  font-size: 14px;
+  outline: none;
+  background: #fff;
+  transition: border-color 0.2s;
+}
+.field-input:focus, .field-textarea:focus, .field-select:focus { border-color: var(--gold); }
+.field-textarea { min-height: 130px; resize: vertical; font-family: var(--sans); line-height: 1.5; }
+.field-help { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+.ai-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.ai-btn {
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #f5e9c8 0%, #fff5db 100%);
+  border: 1px solid #e0c878;
+  color: #8a6d28;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  letter-spacing: 0.03em;
+  transition: all 0.2s;
+}
+.ai-btn:hover { background: linear-gradient(135deg, #efdba0 0%, #f5e9c8 100%); }
+.ai-btn:disabled { opacity: 0.5; cursor: wait; }
+
+/* ───── IMAGE EDITOR ───── */
+.image-area {
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  background: var(--cream);
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.image-area:hover { border-color: var(--gold); }
+.image-area.has-image { cursor: default; border-style: solid; }
+.image-area img { width: 100%; height: 100%; object-fit: contain; padding: 16px; }
+.image-area canvas { max-width: 100%; max-height: 100%; }
+.image-empty { text-align: center; color: var(--muted); padding: 20px; }
+.image-empty-icon { font-size: 2.5rem; margin-bottom: 8px; color: rgba(201,168,76,0.5); }
+.image-empty p { font-size: 13px; }
+.image-empty small { font-size: 11px; }
+.image-tools { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.image-tool {
+  padding: 7px 12px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: var(--sans);
+  font-weight: 600;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.image-tool:hover { background: var(--cream); border-color: var(--gold); }
+.image-tool:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ───── MODAL FOOTER ───── */
+.modal-foot {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  background: #fafaf7;
+  position: sticky;
+  bottom: 0;
+}
+.modal-foot-left, .modal-foot-right { display: flex; gap: 8px; }
+
+/* ───── TOAST ───── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--navy);
+  color: #fff;
+  padding: 14px 20px;
+  border-radius: 10px;
+  z-index: 300;
+  font-size: 13px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  border-left: 4px solid var(--gold);
+  transform: translateX(400px);
+  transition: transform 0.3s ease;
+  max-width: 360px;
+}
+.toast.show { transform: translateX(0); }
+.toast.success { border-left-color: var(--success); }
+.toast.error { border-left-color: var(--danger); }
+
+/* ───── LOADING ───── */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  color: var(--muted);
+  flex-direction: column;
+  gap: 16px;
+}
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ───── EMPTY ───── */
+.empty-state { padding: 80px 20px; text-align: center; color: var(--muted); }
+.empty-state-icon { font-size: 3rem; margin-bottom: 12px; color: rgba(201,168,76,0.4); }
+.empty-state h3 { font-family: var(--serif); color: var(--navy); margin-bottom: 6px; font-size: 1.3rem; }
+
+/* ───── CREATE PRODUCT MODAL ───── */
+.create-form { padding: 24px; }
+.create-form .field { margin-bottom: 16px; }
+.create-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* ───── PROGRESS ───── */
+.progress-bar { background: var(--cream); border-radius: 100px; overflow: hidden; height: 8px; margin-top: 6px; }
+.progress-bar-fill { height: 100%; background: var(--gold); transition: width 0.3s ease; }
+
+/* ───── MOBILE ───── */
+@media (max-width: 640px) {
+  .topbar { padding: 12px 16px; }
+  .content { padding: 16px; }
+  .search-input { width: 100%; }
+  .product-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .product-card-info { padding: 10px; }
+  .modal-body { padding: 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">✝</div>
+    <h1 class="login-title">Universo da Fé</h1>
+    <p class="login-sub">PAINEL ADMINISTRATIVO</p>
+    <input type="password" class="login-input" id="loginInput" placeholder="Senha" autocomplete="current-password">
+    <button class="login-btn" id="loginBtn">Entrar</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-brand">
+      <span class="dot">✝</span>
+      <span>Universo da Fé · Admin</span>
+    </div>
+    <div class="topbar-actions">
+      <a class="topbar-link" href="/" target="_blank">Ver site →</a>
+      <button class="logout-btn" id="logoutBtn">Sair</button>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" data-tab="catalog">Catálogo <span class="tab-badge" id="badgeCatalog">·</span></button>
+    <button class="tab" data-tab="missing">Sem imagem <span class="tab-badge" id="badgeMissing">·</span></button>
+    <button class="tab" data-tab="create">+ Novo produto</button>
+    <button class="tab" data-tab="config">Configuração</button>
+  </div>
+
+  <div class="content">
+
+    <!-- ============ CATÁLOGO ============ -->
+    <div class="panel active" id="panel-catalog">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Catálogo</h2>
+          <p class="panel-sub" id="catalogSub">Carregando produtos…</p>
+        </div>
+        <div class="toolbar">
+          <input type="search" class="search-input" id="searchInput" placeholder="Buscar produto…">
+          <select class="filter-select" id="filterType">
+            <option value="">Todos os tipos</option>
+          </select>
+          <select class="filter-select" id="filterStatus">
+            <option value="">Todos</option>
+            <option value="has-image">Com imagem</option>
+            <option value="no-image">Sem imagem</option>
+            <option value="out-of-stock">Sem estoque</option>
+          </select>
+          <button class="btn btn-ghost" id="refreshBtn">↻ Atualizar</button>
+        </div>
+      </div>
+
+      <div class="bulk-bar" id="bulkBar">
+        <div class="bulk-info">
+          <strong id="bulkCount">0</strong> selecionados
+        </div>
+        <div class="bulk-actions">
+          <button class="btn btn-gold" id="bulkAI">✨ Melhorar textos com IA</button>
+          <button class="btn btn-ghost" id="bulkClear">Limpar</button>
+        </div>
+      </div>
+
+      <div id="catalogGrid"></div>
+    </div>
+
+    <!-- ============ SEM IMAGEM ============ -->
+    <div class="panel" id="panel-missing">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Produtos sem imagem</h2>
+          <p class="panel-sub" id="missingSub">…</p>
+        </div>
+      </div>
+      <div id="missingGrid"></div>
+    </div>
+
+    <!-- ============ NOVO PRODUTO ============ -->
+    <div class="panel" id="panel-create">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Criar novo produto</h2>
+          <p class="panel-sub">Será criado como DRAFT — você publica depois no Shopify ou aqui mesmo</p>
+        </div>
+      </div>
+      <div class="create-form" style="background:#fff;border-radius:12px;border:1px solid var(--border);max-width:800px">
+        <div class="field">
+          <label class="field-label">Título do produto</label>
+          <input type="text" class="field-input" id="newTitle" placeholder="Ex: Imagem de Santo Antônio – 15 cm | Resina">
+          <div class="ai-actions">
+            <button class="ai-btn" id="aiNewTitle">✨ Reescrever no padrão</button>
+          </div>
+        </div>
+        <div class="create-form-grid">
+          <div class="field">
+            <label class="field-label">Tipo</label>
+            <input type="text" class="field-input" id="newType" placeholder="Ex: Resina, Terço, Quadro…">
+          </div>
+          <div class="field">
+            <label class="field-label">Preço (R$)</label>
+            <input type="number" class="field-input" id="newPrice" placeholder="47.90" step="0.01">
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Descrição</label>
+          <textarea class="field-textarea" id="newDescription" placeholder="Descrição do produto…"></textarea>
+          <div class="ai-actions">
+            <button class="ai-btn" id="aiNewDesc">✨ Reescrever no padrão</button>
+            <button class="ai-btn" id="aiNewBoth">✨ Reescrever título + descrição</button>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Imagem</label>
+          <div class="image-area" id="newImageArea" style="max-width:300px">
+            <div class="image-empty">
+              <div class="image-empty-icon">↥</div>
+              <p>Clique para subir imagem</p>
+              <small>PNG, JPG, WebP até 5MB</small>
+            </div>
+          </div>
+          <input type="file" id="newImageInput" accept="image/*" style="display:none">
+          <div class="image-tools">
+            <button class="image-tool" id="newImgStandard" disabled>📐 Padronizar 1600x1600</button>
+            <button class="image-tool" id="newImgWhitebg" disabled>⬜ Fundo branco</button>
+            <button class="image-tool" id="newImgRemove" disabled>🗑 Remover</button>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px">
+          <button class="btn btn-ghost" id="createReset">Limpar</button>
+          <button class="btn btn-primary" id="createSubmit">Criar produto (DRAFT)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ CONFIG ============ -->
+    <div class="panel" id="panel-config">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Configuração</h2>
+          <p class="panel-sub">Verifique se tudo está conectado</p>
+        </div>
+      </div>
+      <div style="background:#fff;border-radius:12px;border:1px solid var(--border);padding:24px;max-width:700px">
+        <div id="configStatus"></div>
+        <hr style="margin:24px 0;border:none;border-top:1px solid var(--border)">
+        <h3 style="font-family:var(--serif);color:var(--navy);font-size:1.2rem;margin-bottom:12px">Variáveis de ambiente necessárias</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px">No Cloudflare Pages → Settings → Environment variables, adicione:</p>
+        <pre style="background:#1a1f3a;color:#c9a84c;padding:16px;border-radius:8px;font-size:12px;overflow-x:auto;line-height:1.7">SHOPIFY_STORE        = sthtec-5u.myshopify.com
+SHOPIFY_ADMIN_TOKEN  = (cole seu token shpat_…)
+OPENAI_API_KEY       = sk-…(sua chave OpenAI)
+ADMIN_PASSWORD       = admin2901</pre>
+        <p style="font-size:12px;color:var(--muted);margin-top:12px">Após adicionar, faça um novo deploy (qualquer commit dispara). As variáveis ficam disponíveis nas <em>Functions</em>.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ EDITOR MODAL ============ -->
+<div class="modal-overlay" id="editorModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-head-title" id="editorTitleHead">Editar produto</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px" id="editorIdHead"></div>
+      </div>
+      <button class="modal-close" id="editorClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div>
+        <label class="field-label">Imagem principal</label>
+        <div class="image-area" id="editorImageArea">
+          <div class="image-empty">
+            <div class="image-empty-icon">↥</div>
+            <p>Sem imagem</p>
+            <small>Clique para subir</small>
+          </div>
+        </div>
+        <input type="file" id="editorImageInput" accept="image/*" style="display:none">
+        <div class="image-tools">
+          <button class="image-tool" id="imgStandard">📐 Padronizar (1600x1600)</button>
+          <button class="image-tool" id="imgWhitebg">⬜ Fundo branco</button>
+          <button class="image-tool" id="imgReplace">🔄 Trocar</button>
+          <button class="image-tool" id="imgRemove">🗑 Remover</button>
+        </div>
+        <p class="field-help" style="margin-top:8px">"Padronizar" redimensiona para 1600x1600px com margem 10%. "Fundo branco" converte tons claros para branco puro #FFFFFF.</p>
+      </div>
+      <div>
+        <div class="field">
+          <label class="field-label">Título</label>
+          <input type="text" class="field-input" id="editorTitle">
+          <div class="ai-actions">
+            <button class="ai-btn" id="aiTitle">✨ Reescrever no padrão</button>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Tipo</label>
+          <input type="text" class="field-input" id="editorType">
+        </div>
+        <div class="field">
+          <label class="field-label">Preço (R$)</label>
+          <input type="number" class="field-input" id="editorPrice" step="0.01">
+        </div>
+        <div class="field">
+          <label class="field-label">Descrição</label>
+          <textarea class="field-textarea" id="editorDescription"></textarea>
+          <div class="ai-actions">
+            <button class="ai-btn" id="aiDesc">✨ Reescrever no padrão</button>
+            <button class="ai-btn" id="aiBoth">✨ Título + descrição</button>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Status</label>
+          <select class="field-select" id="editorStatus">
+            <option value="ACTIVE">Ativo</option>
+            <option value="DRAFT">Rascunho</option>
+            <option value="ARCHIVED">Arquivado</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <div class="modal-foot-left">
+        <button class="btn btn-danger" id="editorDelete">Arquivar</button>
+      </div>
+      <div class="modal-foot-right">
+        <button class="btn btn-ghost" id="editorCancel">Cancelar</button>
+        <button class="btn btn-primary" id="editorSave">Salvar alterações</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+const STATE = {
+  password: null,
+  products: [],
+  filtered: [],
+  selected: new Set(),
+  currentTab: 'catalog',
+  editing: null,
+  editingImageData: null,
+  newImageData: null,
+  filters: { search: '', type: '', status: '' },
+};
+
+// ═══════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════
+function checkLogin() {
+  const saved = sessionStorage.getItem('udf_admin_pwd');
+  if (saved) {
+    STATE.password = saved;
+    showApp();
+    loadProducts();
+  } else {
+    document.getElementById('loginInput').focus();
+  }
+}
+
+document.getElementById('loginBtn').onclick = async () => {
+  const pwd = document.getElementById('loginInput').value;
+  if (!pwd) return;
+  // Validate by trying a real API call
+  try {
+    const res = await fetch('/api/shopify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pwd },
+      body: JSON.stringify({ query: '{ shop { name } }' })
+    });
+    if (res.status === 401) {
+      document.getElementById('loginError').textContent = 'Senha incorreta';
+      return;
+    }
+    sessionStorage.setItem('udf_admin_pwd', pwd);
+    STATE.password = pwd;
+    showApp();
+    loadProducts();
+  } catch (e) {
+    document.getElementById('loginError').textContent = 'Erro de conexão: ' + e.message;
+  }
+};
+
+document.getElementById('loginInput').addEventListener('keypress', e => {
+  if (e.key === 'Enter') document.getElementById('loginBtn').click();
+});
+
+document.getElementById('logoutBtn').onclick = () => {
+  sessionStorage.removeItem('udf_admin_pwd');
+  location.reload();
+};
+
+function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════
+// API CALLS
+// ═══════════════════════════════════════════════════
+async function shopify(query, variables = {}) {
+  const res = await fetch('/api/shopify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Admin-Password': STATE.password },
+    body: JSON.stringify({ query, variables })
+  });
+  if (res.status === 401) {
+    sessionStorage.removeItem('udf_admin_pwd');
+    location.reload();
+  }
+  const data = await res.json();
+  if (data.errors) throw new Error(data.errors.map(e => e.message).join(', '));
+  if (data.error) throw new Error(data.error);
+  return data.data;
+}
+
+async function ai(mode, payload) {
+  const res = await fetch('/api/ai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Admin-Password': STATE.password },
+    body: JSON.stringify({ mode, ...payload })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data;
+}
+
+// ═══════════════════════════════════════════════════
+// LOAD PRODUCTS
+// ═══════════════════════════════════════════════════
+async function loadProducts() {
+  const grid = document.getElementById('catalogGrid');
+  grid.innerHTML = '<div class="loading"><div class="spinner"></div><p>Carregando catálogo…</p></div>';
+
+  try {
+    let all = [];
+    let cursor = null;
+    let hasNext = true;
+
+    while (hasNext) {
+      const cursorArg = cursor ? `, after: "${cursor}"` : '';
+      const data = await shopify(`{
+        products(first: 50${cursorArg}) {
+          edges {
+            cursor
+            node {
+              id title description productType status totalInventory
+              priceRangeV2 { minVariantPrice { amount } }
+              featuredImage { url }
+              variants(first: 1) { edges { node { id } } }
+            }
+          }
+          pageInfo { hasNextPage endCursor }
+        }
+      }`);
+
+      const edges = data.products.edges;
+      all = all.concat(edges.map(e => ({
+        id: e.node.id,
+        title: e.node.title,
+        description: e.node.description || '',
+        type: e.node.productType || '',
+        status: e.node.status,
+        inventory: e.node.totalInventory,
+        price: parseFloat(e.node.priceRangeV2.minVariantPrice.amount),
+        image: e.node.featuredImage?.url || null,
+        variantId: e.node.variants.edges[0]?.node.id || null
+      })));
+
+      hasNext = data.products.pageInfo.hasNextPage;
+      cursor = data.products.pageInfo.endCursor;
+    }
+
+    STATE.products = all;
+    populateTypeFilter();
+    renderCatalog();
+    renderMissing();
+    updateBadges();
+    renderConfig();
+  } catch (err) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠</div><h3>Erro ao carregar</h3><p>${err.message}</p><button class="btn btn-primary" onclick="loadProducts()" style="margin-top:14px">Tentar novamente</button></div>`;
+  }
+}
+
+function populateTypeFilter() {
+  const types = [...new Set(STATE.products.map(p => p.type).filter(Boolean))].sort();
+  const sel = document.getElementById('filterType');
+  sel.innerHTML = '<option value="">Todos os tipos</option>' + types.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// RENDER GRID
+// ═══════════════════════════════════════════════════
+function applyFilters() {
+  STATE.filtered = STATE.products.filter(p => {
+    if (STATE.filters.search) {
+      const q = STATE.filters.search.toLowerCase();
+      if (!p.title.toLowerCase().includes(q) && !p.type.toLowerCase().includes(q)) return false;
+    }
+    if (STATE.filters.type && p.type !== STATE.filters.type) return false;
+    if (STATE.filters.status === 'has-image' && !p.image) return false;
+    if (STATE.filters.status === 'no-image' && p.image) return false;
+    if (STATE.filters.status === 'out-of-stock' && p.inventory > 0) return false;
+    return true;
+  });
+}
+
+function renderCatalog() {
+  applyFilters();
+  const grid = document.getElementById('catalogGrid');
+
+  document.getElementById('catalogSub').textContent =
+    `${STATE.filtered.length} de ${STATE.products.length} produtos`;
+
+  if (!STATE.filtered.length) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚙</div><h3>Nenhum produto</h3><p>Tente outro filtro</p></div>';
+    return;
+  }
+
+  grid.innerHTML = '<div class="product-grid">' + STATE.filtered.map(p => productCard(p)).join('') + '</div>';
+}
+
+function renderMissing() {
+  const missing = STATE.products.filter(p => !p.image);
+  document.getElementById('missingSub').textContent = `${missing.length} produtos sem imagem principal`;
+  const grid = document.getElementById('missingGrid');
+  if (!missing.length) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">✓</div><h3>Todos os produtos têm imagem</h3></div>';
+    return;
+  }
+  grid.innerHTML = '<div class="product-grid">' + missing.map(p => productCard(p)).join('') + '</div>';
+}
+
+function productCard(p) {
+  const sel = STATE.selected.has(p.id);
+  const img = p.image
+    ? `<img src="${p.image}" alt="" loading="lazy">`
+    : `<div class="product-card-noimg">✝</div>`;
+  let badge = '';
+  if (!p.image) badge = '<div class="product-card-badge">Sem foto</div>';
+  else if (p.inventory === 0) badge = '<div class="product-card-badge warn">Sem estoque</div>';
+
+  return `<div class="product-card ${sel ? 'selected' : ''}" data-id="${p.id}">
+    <div class="product-card-check" onclick="event.stopPropagation();toggleSelect('${p.id}')"></div>
+    ${badge}
+    <div class="product-card-img" onclick="openEditor('${p.id}')">${img}</div>
+    <div class="product-card-info" onclick="openEditor('${p.id}')">
+      <div class="product-card-type">${escapeHtml(p.type || '—')}</div>
+      <div class="product-card-title">${escapeHtml(p.title)}</div>
+      <div class="product-card-price">R$ ${p.price.toFixed(2).replace('.', ',')}</div>
+    </div>
+  </div>`;
+}
+
+function updateBadges() {
+  document.getElementById('badgeCatalog').textContent = STATE.products.length;
+  document.getElementById('badgeMissing').textContent = STATE.products.filter(p => !p.image).length;
+}
+
+// ═══════════════════════════════════════════════════
+// SELECTION
+// ═══════════════════════════════════════════════════
+window.toggleSelect = function(id) {
+  if (STATE.selected.has(id)) STATE.selected.delete(id);
+  else STATE.selected.add(id);
+  document.querySelector(`[data-id="${id}"]`)?.classList.toggle('selected');
+  updateBulkBar();
+};
+
+function updateBulkBar() {
+  const bar = document.getElementById('bulkBar');
+  const count = STATE.selected.size;
+  document.getElementById('bulkCount').textContent = count;
+  bar.classList.toggle('active', count > 0);
+}
+
+document.getElementById('bulkClear').onclick = () => {
+  STATE.selected.clear();
+  document.querySelectorAll('.product-card.selected').forEach(c => c.classList.remove('selected'));
+  updateBulkBar();
+};
+
+document.getElementById('bulkAI').onclick = async () => {
+  if (!STATE.selected.size) return;
+  if (!confirm(`Reescrever título e descrição de ${STATE.selected.size} produto(s) com IA? Você pode revisar antes de salvar abrindo cada um.`)) return;
+
+  const ids = [...STATE.selected];
+  toast(`Processando ${ids.length} produtos…`);
+
+  for (let i = 0; i < ids.length; i++) {
+    const p = STATE.products.find(x => x.id === ids[i]);
+    if (!p) continue;
+    try {
+      const r = await ai('rewrite_both', { title: p.title, description: p.description, productType: p.type });
+      if (r.title && r.description) {
+        // Save directly via Shopify
+        await shopify(`mutation($input: ProductInput!) {
+          productUpdate(input: $input) { product { id } userErrors { message } }
+        }`, { input: { id: p.id, title: r.title, descriptionHtml: r.description } });
+        p.title = r.title;
+        p.description = r.description;
+        toast(`(${i+1}/${ids.length}) ${r.title.slice(0,40)}`, 'success');
+      }
+    } catch (e) {
+      toast(`Erro em "${p.title.slice(0,30)}": ${e.message}`, 'error');
+    }
+  }
+
+  STATE.selected.clear();
+  updateBulkBar();
+  renderCatalog();
+  toast('Concluído!', 'success');
+};
+
+// ═══════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    const id = tab.dataset.tab;
+    document.getElementById('panel-' + id).classList.add('active');
+    STATE.currentTab = id;
+  };
+});
+
+// ═══════════════════════════════════════════════════
+// FILTERS
+// ═══════════════════════════════════════════════════
+document.getElementById('searchInput').addEventListener('input', e => {
+  STATE.filters.search = e.target.value;
+  renderCatalog();
+});
+document.getElementById('filterType').addEventListener('change', e => {
+  STATE.filters.type = e.target.value;
+  renderCatalog();
+});
+document.getElementById('filterStatus').addEventListener('change', e => {
+  STATE.filters.status = e.target.value;
+  renderCatalog();
+});
+document.getElementById('refreshBtn').onclick = () => loadProducts();
+
+// ═══════════════════════════════════════════════════
+// EDITOR MODAL
+// ═══════════════════════════════════════════════════
+window.openEditor = function(id) {
+  const p = STATE.products.find(x => x.id === id);
+  if (!p) return;
+  STATE.editing = p;
+  STATE.editingImageData = null;
+  document.getElementById('editorTitleHead').textContent = 'Editar produto';
+  document.getElementById('editorIdHead').textContent = p.id.replace('gid://shopify/Product/', 'ID: ');
+  document.getElementById('editorTitle').value = p.title;
+  document.getElementById('editorType').value = p.type;
+  document.getElementById('editorPrice').value = p.price;
+  document.getElementById('editorDescription').value = p.description.replace(/<[^>]*>/g, '');
+  document.getElementById('editorStatus').value = p.status;
+
+  const imgArea = document.getElementById('editorImageArea');
+  if (p.image) {
+    imgArea.classList.add('has-image');
+    imgArea.innerHTML = `<img src="${p.image}" alt="">`;
+  } else {
+    imgArea.classList.remove('has-image');
+    imgArea.innerHTML = '<div class="image-empty"><div class="image-empty-icon">↥</div><p>Sem imagem</p><small>Clique para subir</small></div>';
+  }
+  document.getElementById('editorModal').classList.add('active');
+};
+
+document.getElementById('editorClose').onclick = closeEditor;
+document.getElementById('editorCancel').onclick = closeEditor;
+document.getElementById('editorModal').onclick = e => { if (e.target.id === 'editorModal') closeEditor(); };
+
+function closeEditor() {
+  document.getElementById('editorModal').classList.remove('active');
+  STATE.editing = null;
+  STATE.editingImageData = null;
+}
+
+// ═══════════════════════════════════════════════════
+// IMAGE UPLOAD & PROCESSING
+// ═══════════════════════════════════════════════════
+document.getElementById('editorImageArea').onclick = () => document.getElementById('editorImageInput').click();
+document.getElementById('imgReplace').onclick = () => document.getElementById('editorImageInput').click();
+
+document.getElementById('editorImageInput').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const dataUrl = await fileToDataUrl(file);
+  STATE.editingImageData = dataUrl;
+  const imgArea = document.getElementById('editorImageArea');
+  imgArea.classList.add('has-image');
+  imgArea.innerHTML = `<img src="${dataUrl}" alt="">`;
+});
+
+document.getElementById('imgRemove').onclick = () => {
+  STATE.editingImageData = 'REMOVE';
+  const imgArea = document.getElementById('editorImageArea');
+  imgArea.classList.remove('has-image');
+  imgArea.innerHTML = '<div class="image-empty"><div class="image-empty-icon">↥</div><p>Removida</p><small>Salve para confirmar</small></div>';
+};
+
+document.getElementById('imgStandard').onclick = async () => {
+  const src = STATE.editingImageData && STATE.editingImageData !== 'REMOVE'
+    ? STATE.editingImageData
+    : STATE.editing?.image;
+  if (!src) { toast('Sem imagem para padronizar', 'error'); return; }
+  toast('Padronizando…');
+  try {
+    const processed = await standardizeImage(src);
+    STATE.editingImageData = processed;
+    document.getElementById('editorImageArea').innerHTML = `<img src="${processed}" alt="">`;
+    document.getElementById('editorImageArea').classList.add('has-image');
+    toast('Imagem padronizada 1600x1600', 'success');
+  } catch (e) {
+    toast('Erro: ' + e.message, 'error');
+  }
+};
+
+document.getElementById('imgWhitebg').onclick = async () => {
+  const src = STATE.editingImageData && STATE.editingImageData !== 'REMOVE'
+    ? STATE.editingImageData
+    : STATE.editing?.image;
+  if (!src) { toast('Sem imagem', 'error'); return; }
+  toast('Convertendo fundo…');
+  try {
+    const processed = await whitenBackground(src);
+    STATE.editingImageData = processed;
+    document.getElementById('editorImageArea').innerHTML = `<img src="${processed}" alt="">`;
+    document.getElementById('editorImageArea').classList.add('has-image');
+    toast('Fundo branco aplicado', 'success');
+  } catch (e) {
+    toast('Erro: ' + e.message, 'error');
+  }
+};
+
+function fileToDataUrl(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function loadImage(src) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => res(img);
+    img.onerror = rej;
+    img.src = src;
+  });
+}
+
+async function standardizeImage(src) {
+  const img = await loadImage(src);
+  const SIZE = 1600;
+  const MARGIN = 0.10;
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE;
+  canvas.height = SIZE;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  const innerSize = SIZE * (1 - 2 * MARGIN);
+  const ratio = Math.min(innerSize / img.width, innerSize / img.height);
+  const w = img.width * ratio;
+  const h = img.height * ratio;
+  const x = (SIZE - w) / 2;
+  const y = (SIZE - h) / 2;
+  ctx.drawImage(img, x, y, w, h);
+
+  return canvas.toDataURL('image/jpeg', 0.92);
+}
+
+async function whitenBackground(src) {
+  const img = await loadImage(src);
+  const canvas = document.createElement('canvas');
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const px = data.data;
+  // threshold: if all RGB > 230, snap to pure white
+  const T = 230;
+  for (let i = 0; i < px.length; i += 4) {
+    if (px[i] > T && px[i+1] > T && px[i+2] > T) {
+      px[i] = 255; px[i+1] = 255; px[i+2] = 255;
+    }
+  }
+  ctx.putImageData(data, 0, 0);
+  return canvas.toDataURL('image/jpeg', 0.92);
+}
+
+// ═══════════════════════════════════════════════════
+// AI BUTTONS (EDITOR)
+// ═══════════════════════════════════════════════════
+async function runAI(mode, target) {
+  const t = document.getElementById('editorTitle').value;
+  const d = document.getElementById('editorDescription').value;
+  const type = document.getElementById('editorType').value;
+  target.disabled = true;
+  target.textContent = '⏳ Gerando…';
+  try {
+    if (mode === 'rewrite_title') {
+      const r = await ai(mode, { title: t, productType: type });
+      document.getElementById('editorTitle').value = r.text;
+    } else if (mode === 'rewrite_description') {
+      const r = await ai(mode, { title: t, description: d, productType: type });
+      document.getElementById('editorDescription').value = r.text;
+    } else if (mode === 'rewrite_both') {
+      const r = await ai(mode, { title: t, description: d, productType: type });
+      if (r.title) document.getElementById('editorTitle').value = r.title;
+      if (r.description) document.getElementById('editorDescription').value = r.description;
+    }
+    toast('IA aplicada — revise e salve', 'success');
+  } catch (e) {
+    toast('Erro IA: ' + e.message, 'error');
+  } finally {
+    target.disabled = false;
+    target.innerHTML = target.dataset.label;
+  }
+}
+
+['aiTitle','aiDesc','aiBoth'].forEach(id => {
+  const btn = document.getElementById(id);
+  btn.dataset.label = btn.innerHTML;
+  btn.onclick = () => {
+    const map = { aiTitle: 'rewrite_title', aiDesc: 'rewrite_description', aiBoth: 'rewrite_both' };
+    runAI(map[id], btn);
+  };
+});
+
+// ═══════════════════════════════════════════════════
+// SAVE PRODUCT
+// ═══════════════════════════════════════════════════
+document.getElementById('editorSave').onclick = async () => {
+  if (!STATE.editing) return;
+  const p = STATE.editing;
+  const btn = document.getElementById('editorSave');
+  btn.disabled = true;
+  btn.textContent = 'Salvando…';
+
+  try {
+    const input = {
+      id: p.id,
+      title: document.getElementById('editorTitle').value.trim(),
+      productType: document.getElementById('editorType').value.trim(),
+      descriptionHtml: document.getElementById('editorDescription').value.trim(),
+      status: document.getElementById('editorStatus').value,
+    };
+
+    await shopify(`mutation($input: ProductInput!) {
+      productUpdate(input: $input) { product { id } userErrors { field message } }
+    }`, { input });
+
+    // Price update via variant
+    const price = parseFloat(document.getElementById('editorPrice').value);
+    if (!isNaN(price) && price !== p.price && p.variantId) {
+      await shopify(`mutation($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+        productVariantsBulkUpdate(productId: $productId, variants: $variants) { userErrors { message } }
+      }`, { productId: p.id, variants: [{ id: p.variantId, price: price.toFixed(2) }] });
+    }
+
+    // Image update
+    if (STATE.editingImageData === 'REMOVE') {
+      // Get current media and delete
+      const cur = await shopify(`{ product(id: "${p.id}") { media(first: 10) { edges { node { id } } } } }`);
+      const mediaIds = cur.product.media.edges.map(e => e.node.id);
+      if (mediaIds.length) {
+        await shopify(`mutation($productId: ID!, $mediaIds: [ID!]!) {
+          productDeleteMedia(productId: $productId, mediaIds: $mediaIds) { deletedMediaIds userErrors { message } }
+        }`, { productId: p.id, mediaIds });
+      }
+    } else if (STATE.editingImageData) {
+      // Upload new image
+      const stagedRes = await shopify(`mutation($input: [StagedUploadInput!]!) {
+        stagedUploadsCreate(input: $input) {
+          stagedTargets { url resourceUrl parameters { name value } }
+          userErrors { message }
+        }
+      }`, { input: [{ filename: `product-${Date.now()}.jpg`, mimeType: 'image/jpeg', resource: 'IMAGE', httpMethod: 'POST' }] });
+
+      const target = stagedRes.stagedUploadsCreate.stagedTargets[0];
+      const blob = dataUrlToBlob(STATE.editingImageData);
+      const formData = new FormData();
+      target.parameters.forEach(param => formData.append(param.name, param.value));
+      formData.append('file', blob);
+
+      const uploadRes = await fetch(target.url, { method: 'POST', body: formData });
+      if (!uploadRes.ok) throw new Error('Upload falhou: ' + uploadRes.status);
+
+      // Delete old images, attach new
+      const cur = await shopify(`{ product(id: "${p.id}") { media(first: 10) { edges { node { id } } } } }`);
+      const oldIds = cur.product.media.edges.map(e => e.node.id);
+      if (oldIds.length) {
+        await shopify(`mutation($productId: ID!, $mediaIds: [ID!]!) {
+          productDeleteMedia(productId: $productId, mediaIds: $mediaIds) { deletedMediaIds }
+        }`, { productId: p.id, mediaIds: oldIds });
+      }
+      await shopify(`mutation($productId: ID!, $media: [CreateMediaInput!]!) {
+        productCreateMedia(productId: $productId, media: $media) { media { id } userErrors { message } }
+      }`, { productId: p.id, media: [{ originalSource: target.resourceUrl, mediaContentType: 'IMAGE' }] });
+    }
+
+    toast('Salvo!', 'success');
+    closeEditor();
+    await loadProducts();
+  } catch (e) {
+    toast('Erro: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Salvar alterações';
+  }
+};
+
+document.getElementById('editorDelete').onclick = async () => {
+  if (!STATE.editing) return;
+  if (!confirm(`Arquivar "${STATE.editing.title}"? Você poderá restaurar depois no Shopify.`)) return;
+  try {
+    await shopify(`mutation($input: ProductInput!) {
+      productUpdate(input: $input) { product { id } userErrors { message } }
+    }`, { input: { id: STATE.editing.id, status: 'ARCHIVED' } });
+    toast('Arquivado', 'success');
+    closeEditor();
+    await loadProducts();
+  } catch (e) {
+    toast('Erro: ' + e.message, 'error');
+  }
+};
+
+function dataUrlToBlob(dataUrl) {
+  const arr = dataUrl.split(',');
+  const mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]);
+  const u8 = new Uint8Array(bstr.length);
+  for (let i = 0; i < bstr.length; i++) u8[i] = bstr.charCodeAt(i);
+  return new Blob([u8], { type: mime });
+}
+
+// ═══════════════════════════════════════════════════
+// CREATE NEW PRODUCT
+// ═══════════════════════════════════════════════════
+document.getElementById('newImageArea').onclick = () => document.getElementById('newImageInput').click();
+document.getElementById('newImageInput').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const dataUrl = await fileToDataUrl(file);
+  STATE.newImageData = dataUrl;
+  document.getElementById('newImageArea').innerHTML = `<img src="${dataUrl}" alt="">`;
+  document.getElementById('newImageArea').classList.add('has-image');
+  ['newImgStandard','newImgWhitebg','newImgRemove'].forEach(id => document.getElementById(id).disabled = false);
+});
+
+document.getElementById('newImgStandard').onclick = async () => {
+  if (!STATE.newImageData) return;
+  STATE.newImageData = await standardizeImage(STATE.newImageData);
+  document.getElementById('newImageArea').innerHTML = `<img src="${STATE.newImageData}" alt="">`;
+  toast('Padronizada', 'success');
+};
+document.getElementById('newImgWhitebg').onclick = async () => {
+  if (!STATE.newImageData) return;
+  STATE.newImageData = await whitenBackground(STATE.newImageData);
+  document.getElementById('newImageArea').innerHTML = `<img src="${STATE.newImageData}" alt="">`;
+  toast('Fundo branco', 'success');
+};
+document.getElementById('newImgRemove').onclick = () => {
+  STATE.newImageData = null;
+  document.getElementById('newImageArea').classList.remove('has-image');
+  document.getElementById('newImageArea').innerHTML = '<div class="image-empty"><div class="image-empty-icon">↥</div><p>Clique para subir imagem</p><small>PNG, JPG, WebP até 5MB</small></div>';
+  ['newImgStandard','newImgWhitebg','newImgRemove'].forEach(id => document.getElementById(id).disabled = true);
+};
+
+// AI buttons for new product
+['aiNewTitle','aiNewDesc','aiNewBoth'].forEach(id => {
+  const btn = document.getElementById(id);
+  btn.dataset.label = btn.innerHTML;
+  btn.onclick = async () => {
+    const t = document.getElementById('newTitle').value;
+    const d = document.getElementById('newDescription').value;
+    const type = document.getElementById('newType').value;
+    if (!t) { toast('Preencha o título primeiro', 'error'); return; }
+    btn.disabled = true; btn.textContent = '⏳';
+    try {
+      const map = { aiNewTitle: 'rewrite_title', aiNewDesc: 'rewrite_description', aiNewBoth: 'rewrite_both' };
+      const r = await ai(map[id], { title: t, description: d, productType: type });
+      if (id === 'aiNewTitle') document.getElementById('newTitle').value = r.text;
+      else if (id === 'aiNewDesc') document.getElementById('newDescription').value = r.text;
+      else { if (r.title) document.getElementById('newTitle').value = r.title; if (r.description) document.getElementById('newDescription').value = r.description; }
+      toast('IA aplicada', 'success');
+    } catch (e) { toast('Erro: ' + e.message, 'error'); }
+    finally { btn.disabled = false; btn.innerHTML = btn.dataset.label; }
+  };
+});
+
+document.getElementById('createReset').onclick = () => {
+  document.getElementById('newTitle').value = '';
+  document.getElementById('newType').value = '';
+  document.getElementById('newPrice').value = '';
+  document.getElementById('newDescription').value = '';
+  document.getElementById('newImgRemove').click();
+};
+
+document.getElementById('createSubmit').onclick = async () => {
+  const title = document.getElementById('newTitle').value.trim();
+  const type = document.getElementById('newType').value.trim();
+  const priceStr = document.getElementById('newPrice').value;
+  const desc = document.getElementById('newDescription').value.trim();
+  if (!title) { toast('Título é obrigatório', 'error'); return; }
+  if (!priceStr || isNaN(parseFloat(priceStr))) { toast('Preço inválido', 'error'); return; }
+
+  const btn = document.getElementById('createSubmit');
+  btn.disabled = true; btn.textContent = 'Criando…';
+
+  try {
+    const res = await shopify(`mutation($input: ProductInput!) {
+      productCreate(input: $input) {
+        product { id variants(first: 1) { edges { node { id } } } }
+        userErrors { field message }
+      }
+    }`, { input: { title, productType: type, descriptionHtml: desc, status: 'DRAFT' } });
+
+    if (res.productCreate.userErrors.length) throw new Error(res.productCreate.userErrors[0].message);
+    const productId = res.productCreate.product.id;
+    const variantId = res.productCreate.product.variants.edges[0]?.node.id;
+
+    // Set price
+    if (variantId) {
+      await shopify(`mutation($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+        productVariantsBulkUpdate(productId: $productId, variants: $variants) { userErrors { message } }
+      }`, { productId, variants: [{ id: variantId, price: parseFloat(priceStr).toFixed(2) }] });
+    }
+
+    // Upload image
+    if (STATE.newImageData) {
+      const stagedRes = await shopify(`mutation($input: [StagedUploadInput!]!) {
+        stagedUploadsCreate(input: $input) {
+          stagedTargets { url resourceUrl parameters { name value } }
+        }
+      }`, { input: [{ filename: `new-${Date.now()}.jpg`, mimeType: 'image/jpeg', resource: 'IMAGE', httpMethod: 'POST' }] });
+
+      const target = stagedRes.stagedUploadsCreate.stagedTargets[0];
+      const blob = dataUrlToBlob(STATE.newImageData);
+      const formData = new FormData();
+      target.parameters.forEach(p => formData.append(p.name, p.value));
+      formData.append('file', blob);
+      await fetch(target.url, { method: 'POST', body: formData });
+
+      await shopify(`mutation($productId: ID!, $media: [CreateMediaInput!]!) {
+        productCreateMedia(productId: $productId, media: $media) { media { id } userErrors { message } }
+      }`, { productId, media: [{ originalSource: target.resourceUrl, mediaContentType: 'IMAGE' }] });
+    }
+
+    toast(`Produto "${title}" criado como DRAFT`, 'success');
+    document.getElementById('createReset').click();
+    await loadProducts();
+  } catch (e) {
+    toast('Erro: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Criar produto (DRAFT)';
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════
+async function renderConfig() {
+  const div = document.getElementById('configStatus');
+  div.innerHTML = '<div class="loading"><div class="spinner"></div><p>Verificando…</p></div>';
+
+  const checks = [];
+
+  // Shopify
+  try {
+    await shopify('{ shop { name } }');
+    checks.push({ name: 'Shopify Admin API', ok: true, msg: 'Conectado' });
+  } catch (e) {
+    checks.push({ name: 'Shopify Admin API', ok: false, msg: e.message });
+  }
+
+  // OpenAI (light test)
+  try {
+    const r = await fetch('/api/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Password': STATE.password },
+      body: JSON.stringify({ mode: 'rewrite_title', title: 'teste', productType: 'teste' })
+    });
+    const data = await r.json();
+    if (data.error) throw new Error(data.error);
+    checks.push({ name: 'OpenAI (GPT)', ok: true, msg: 'Conectado' });
+  } catch (e) {
+    checks.push({ name: 'OpenAI (GPT)', ok: false, msg: e.message });
+  }
+
+  div.innerHTML = checks.map(c => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-weight:600;color:var(--navy);font-family:var(--serif);font-size:1.1rem">${c.name}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">${c.msg}</div>
+      </div>
+      <div style="background:${c.ok ? 'var(--success)' : 'var(--danger)'};color:#fff;padding:5px 12px;border-radius:100px;font-size:11px;font-weight:700;letter-spacing:0.05em">
+        ${c.ok ? '● OK' : '● FALHA'}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function toast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+checkLogin();
+</script>
+</body>
+</html>
