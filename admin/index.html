@@ -254,6 +254,7 @@ select.filter-select {
 }
 .product-card-badge.warn { background: var(--warn); }
 .product-card-badge.success { background: var(--success); }
+.product-card-badge.archived { background: #888; }
 
 /* ───── BULK BAR ───── */
 .bulk-bar {
@@ -547,6 +548,7 @@ select.filter-select {
             <option value="has-image">Com imagem</option>
             <option value="no-image">Sem imagem</option>
             <option value="out-of-stock">Sem estoque</option>
+            <option value="archived">Arquivados</option>
           </select>
           <button class="btn btn-ghost" id="refreshBtn">↻ Atualizar</button>
         </div>
@@ -855,41 +857,41 @@ async function loadProducts() {
 
   try {
     let all = [];
-    let cursor = null;
-    let hasNext = true;
-
-    while (hasNext) {
-      const cursorArg = cursor ? `, after: "${cursor}"` : '';
-      const data = await shopify(`{
-        products(first: 50${cursorArg}) {
-          edges {
-            cursor
-            node {
-              id title description productType status totalInventory
-              priceRangeV2 { minVariantPrice { amount } }
-              featuredImage { url }
-              variants(first: 1) { edges { node { id } } }
+    // Buscar ACTIVE + DRAFT
+    for (const status of ['active', 'draft', 'archived']) {
+      let cursor = null;
+      let hasNext = true;
+      while (hasNext) {
+        const cursorArg = cursor ? `, after: "${cursor}"` : '';
+        const data = await shopify(`{
+          products(first: 50, query: "status:${status}"${cursorArg}) {
+            edges {
+              cursor
+              node {
+                id title description productType status totalInventory
+                priceRangeV2 { minVariantPrice { amount } }
+                featuredImage { url }
+                variants(first: 1) { edges { node { id } } }
+              }
             }
+            pageInfo { hasNextPage endCursor }
           }
-          pageInfo { hasNextPage endCursor }
-        }
-      }`);
-
-      const edges = data.products.edges;
-      all = all.concat(edges.map(e => ({
-        id: e.node.id,
-        title: e.node.title,
-        description: e.node.description || '',
-        type: e.node.productType || '',
-        status: e.node.status,
-        inventory: e.node.totalInventory,
-        price: parseFloat(e.node.priceRangeV2.minVariantPrice.amount),
-        image: e.node.featuredImage?.url || null,
-        variantId: e.node.variants.edges[0]?.node.id || null
-      })));
-
-      hasNext = data.products.pageInfo.hasNextPage;
-      cursor = data.products.pageInfo.endCursor;
+        }`);
+        const edges = data.products.edges;
+        all = all.concat(edges.map(e => ({
+          id: e.node.id,
+          title: e.node.title,
+          description: e.node.description || '',
+          type: e.node.productType || '',
+          status: e.node.status,
+          inventory: e.node.totalInventory,
+          price: parseFloat(e.node.priceRangeV2.minVariantPrice.amount),
+          image: e.node.featuredImage?.url || null,
+          variantId: e.node.variants.edges[0]?.node.id || null
+        })));
+        hasNext = data.products.pageInfo.hasNextPage;
+        cursor = data.products.pageInfo.endCursor;
+      }
     }
 
     STATE.products = all;
@@ -914,6 +916,12 @@ function populateTypeFilter() {
 // ═══════════════════════════════════════════════════
 function applyFilters() {
   STATE.filtered = STATE.products.filter(p => {
+    if (STATE.filters.status === 'archived') {
+      if (p.status !== 'ARCHIVED') return false;
+    } else {
+      // Por padrão, nunca mostrar arquivados no catálogo geral
+      if (p.status === 'ARCHIVED') return false;
+    }
     if (STATE.filters.search) {
       const q = STATE.filters.search.toLowerCase();
       if (!p.title.toLowerCase().includes(q) && !p.type.toLowerCase().includes(q)) return false;
@@ -958,7 +966,8 @@ function productCard(p) {
     ? `<img src="${p.image}" alt="" loading="lazy">`
     : `<div class="product-card-noimg">✝</div>`;
   let badge = '';
-  if (!p.image) badge = '<div class="product-card-badge">Sem foto</div>';
+  if (p.status === 'ARCHIVED') badge = '<div class="product-card-badge archived">Arquivado</div>';
+  else if (!p.image) badge = '<div class="product-card-badge">Sem foto</div>';
   else if (p.inventory === 0) badge = '<div class="product-card-badge warn">Sem estoque</div>';
 
   return `<div class="product-card ${sel ? 'selected' : ''}" data-id="${p.id}">
@@ -974,8 +983,11 @@ function productCard(p) {
 }
 
 function updateBadges() {
-  document.getElementById('badgeCatalog').textContent = STATE.products.length;
-  document.getElementById('badgeMissing').textContent = STATE.products.filter(p => !p.image).length;
+  const ativos = STATE.products.filter(p => p.status !== 'ARCHIVED');
+  const arquivados = STATE.products.filter(p => p.status === 'ARCHIVED');
+  document.getElementById('badgeCatalog').textContent = ativos.length;
+  document.getElementById('badgeMissing').textContent = ativos.filter(p => !p.image).length;
+  document.getElementById('badgeArchived').textContent = arquivados.length || '·';
 }
 
 // ═══════════════════════════════════════════════════
@@ -1007,23 +1019,36 @@ document.getElementById('bulkClear').onclick = () => {
 document.getElementById('bulkArchive').onclick = async () => {
   if (!STATE.selected.size) return;
   const count = STATE.selected.size;
-  if (!confirm(`Arquivar ${count} produto(s) selecionado(s)? Você poderá restaurar na aba "Arquivados".`)) return;
+  if (!confirm(`Arquivar ${count} produto(s) selecionado(s)? Você poderá ver na opção "Arquivados" do filtro.`)) return;
   const ids = [...STATE.selected];
+  const btn = document.getElementById('bulkArchive');
+  btn.disabled = true;
+  btn.textContent = 'Arquivando…';
   let ok = 0, errs = 0;
   for (const id of ids) {
     try {
-      await shopify(`mutation($input: ProductInput!) {
-        productUpdate(input: $input) { product { id } userErrors { message } }
+      const res = await shopify(`mutation($input: ProductInput!) {
+        productUpdate(input: $input) { product { id status } userErrors { field message } }
       }`, { input: { id, status: 'ARCHIVED' } });
-      ok++;
+      const ue = res?.productUpdate?.userErrors;
+      if (ue && ue.length > 0) {
+        console.error('userError arquivando', id, ue);
+        errs++;
+      } else {
+        ok++;
+      }
     } catch (e) {
+      console.error('Erro arquivando', id, e);
       errs++;
     }
   }
   STATE.selected.clear();
   document.querySelectorAll('.product-card.selected').forEach(c => c.classList.remove('selected'));
+  btn.disabled = false;
+  btn.textContent = '🗑 Arquivar selecionados';
   updateBulkBar();
-  toast(`${ok} arquivado(s)${errs ? `, ${errs} erro(s)` : ''}`, errs ? 'error' : 'success');
+  if (ok > 0) toast(`${ok} produto(s) arquivado(s)${errs ? ` · ${errs} erro(s)` : ''}`, errs ? 'error' : 'success');
+  else toast(`Erro ao arquivar. Verifique o console.`, 'error');
   await loadProducts();
 };
 
