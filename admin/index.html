@@ -165,6 +165,8 @@ body { font-family: var(--sans); background: #f5f2ec; color: var(--ink); min-hei
 }
 .btn-primary { background: var(--navy); color: var(--gold); }
 .btn-primary:hover { background: var(--navy-2); }
+.btn-danger { background: #c0392b; color: #fff; border-color: #c0392b; }
+.btn-danger:hover { background: #a93226; border-color: #a93226; }
 .btn-primary:disabled { background: #ccc; color: #888; cursor: not-allowed; }
 .btn-gold { background: var(--gold); color: var(--navy); }
 .btn-gold:hover { background: var(--gold-light); }
@@ -522,6 +524,7 @@ select.filter-select {
     <button class="tab active" data-tab="catalog">Catálogo <span class="tab-badge" id="badgeCatalog">·</span></button>
     <button class="tab" data-tab="missing">Sem imagem <span class="tab-badge" id="badgeMissing">·</span></button>
     <button class="tab" data-tab="create">+ Novo produto</button>
+    <button class="tab" data-tab="archived">Arquivados <span class="tab-badge" id="badgeArchived">·</span></button>
     <button class="tab" data-tab="config">Configuração</button>
   </div>
 
@@ -555,6 +558,7 @@ select.filter-select {
         </div>
         <div class="bulk-actions">
           <button class="btn btn-gold" id="bulkAI">✨ Melhorar textos com IA</button>
+          <button class="btn btn-danger" id="bulkArchive">🗑 Arquivar selecionados</button>
           <button class="btn btn-ghost" id="bulkClear">Limpar</button>
         </div>
       </div>
@@ -631,6 +635,19 @@ select.filter-select {
     </div>
 
     <!-- ============ CONFIG ============ -->
+    <div class="panel" id="panel-archived">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Produtos arquivados</h2>
+          <p class="panel-sub" id="archivedSub">…</p>
+        </div>
+        <div class="toolbar">
+          <button class="btn btn-ghost" id="refreshArchivedBtn">↻ Atualizar</button>
+        </div>
+      </div>
+      <div id="archivedGrid"></div>
+    </div>
+
     <div class="panel" id="panel-config">
       <div class="panel-header">
         <div>
@@ -982,6 +999,32 @@ document.getElementById('bulkClear').onclick = () => {
   STATE.selected.clear();
   document.querySelectorAll('.product-card.selected').forEach(c => c.classList.remove('selected'));
   updateBulkBar();
+};
+
+// ═══════════════════════════════════════════════════
+// BULK ARCHIVE
+// ═══════════════════════════════════════════════════
+document.getElementById('bulkArchive').onclick = async () => {
+  if (!STATE.selected.size) return;
+  const count = STATE.selected.size;
+  if (!confirm(`Arquivar ${count} produto(s) selecionado(s)? Você poderá restaurar na aba "Arquivados".`)) return;
+  const ids = [...STATE.selected];
+  let ok = 0, errs = 0;
+  for (const id of ids) {
+    try {
+      await shopify(`mutation($input: ProductInput!) {
+        productUpdate(input: $input) { product { id } userErrors { message } }
+      }`, { input: { id, status: 'ARCHIVED' } });
+      ok++;
+    } catch (e) {
+      errs++;
+    }
+  }
+  STATE.selected.clear();
+  document.querySelectorAll('.product-card.selected').forEach(c => c.classList.remove('selected'));
+  updateBulkBar();
+  toast(`${ok} arquivado(s)${errs ? `, ${errs} erro(s)` : ''}`, errs ? 'error' : 'success');
+  await loadProducts();
 };
 
 document.getElementById('bulkAI').onclick = async () => {
@@ -1528,6 +1571,76 @@ function toast(msg, type = '') {
   t.className = 'toast show ' + type;
   setTimeout(() => t.classList.remove('show'), 3500);
 }
+
+// ═══════════════════════════════════════════════════
+// ARQUIVADOS
+// ═══════════════════════════════════════════════════
+async function loadArchived() {
+  const grid = document.getElementById('archivedGrid');
+  const sub = document.getElementById('archivedSub');
+  grid.innerHTML = '<div class="loading"><div class="spinner"></div><p>Carregando…</p></div>';
+  try {
+    const data = await shopify(`{
+      products(first: 50, query: "status:archived") {
+        edges { node {
+          id title productType status
+          priceRangeV2 { minVariantPrice { amount } }
+          featuredMedia { preview { image { url } } }
+        }}
+      }
+    }`);
+    const products = data.products.edges.map(e => e.node);
+    sub.textContent = `${products.length} produto(s) arquivado(s)`;
+    document.getElementById('badgeArchived').textContent = products.length;
+    if (!products.length) {
+      grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🗄</div><h3>Nenhum produto arquivado</h3><p>Produtos arquivados aparecem aqui.</p></div>';
+      return;
+    }
+    grid.innerHTML = `<div class="product-grid">${products.map(p => {
+      const img = p.featuredMedia?.preview?.image?.url;
+      const price = parseFloat(p.priceRangeV2?.minVariantPrice?.amount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      return `<div class="product-card" style="opacity:0.75">
+        <div class="product-card-img">
+          ${img ? `<img src="${img}" alt="">` : '<div class="product-card-img-empty">Sem imagem</div>'}
+        </div>
+        <div class="product-card-body">
+          <div class="product-card-type">${escapeHtml(p.productType || '—')}</div>
+          <div class="product-card-title">${escapeHtml(p.title)}</div>
+          <div class="product-card-price">${price}</div>
+          <button class="btn btn-gold" style="margin-top:8px;width:100%;font-size:12px" onclick="restoreProduct('${p.id}', this)">↩ Restaurar</button>
+        </div>
+      </div>`;
+    }).join('')}</div>`;
+  } catch (e) {
+    grid.innerHTML = `<div class="empty-state"><h3>Erro</h3><p>${e.message}</p></div>`;
+  }
+}
+
+async function restoreProduct(id, btn) {
+  if (!confirm('Restaurar este produto como DRAFT?')) return;
+  btn.disabled = true;
+  btn.textContent = '…';
+  try {
+    await shopify(`mutation($input: ProductInput!) {
+      productUpdate(input: $input) { product { id } userErrors { message } }
+    }`, { input: { id, status: 'DRAFT' } });
+    toast('Produto restaurado como rascunho', 'success');
+    loadArchived();
+  } catch (e) {
+    toast('Erro: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = '↩ Restaurar';
+  }
+}
+
+document.getElementById('refreshArchivedBtn').onclick = loadArchived;
+
+// Hook: carregar arquivados ao clicar na aba
+document.querySelectorAll('.tab').forEach(tab => {
+  if (tab.dataset.tab === 'archived') {
+    tab.addEventListener('click', loadArchived);
+  }
+});
 
 // ═══════════════════════════════════════════════════
 // INIT
