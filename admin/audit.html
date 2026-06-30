@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Auditoria IA — Universo da Fé</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root { --navy:#1D4E89; --gold:#C9A227; --bg:#0f1115; --card:#1a1d24; --ok:#2e7d32; --warn:#b8860b; --err:#b71c1c; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, Segoe UI, Roboto, sans-serif; background:var(--bg); color:#eee; }
+  header { padding:16px 24px; background:var(--navy); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+  header h1 { font-size:18px; margin:0; color:var(--gold); }
+  .stats { display:flex; gap:16px; font-size:13px; color:#cdd; }
+  main { padding:20px; max-width:1200px; margin:0 auto; }
+  button { cursor:pointer; border:none; border-radius:6px; padding:8px 14px; font-size:13px; font-weight:600; }
+  .btn-primary { background:var(--gold); color:#1a1d24; }
+  .btn-secondary { background:#333a45; color:#eee; }
+  .btn-ok { background:var(--ok); color:#fff; }
+  .btn-warn { background:var(--warn); color:#000; }
+  .btn-err { background:var(--err); color:#fff; }
+  .btn-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  #login { max-width:320px; margin:80px auto; text-align:center; }
+  #login input { width:100%; padding:10px; margin:10px 0; border-radius:6px; border:1px solid #444; background:#1a1d24; color:#eee; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(340px,1fr)); gap:16px; margin-top:20px; }
+  .card { background:var(--card); border-radius:10px; padding:14px; border:1px solid #2a2e38; }
+  .card img { width:100%; height:220px; object-fit:contain; background:#0a0b0d; border-radius:6px; }
+  .card h3 { font-size:14px; margin:10px 0 4px; }
+  .field { font-size:12px; color:#aab; margin:2px 0; }
+  .field b { color:#eee; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:700; }
+  .badge.PENDENTE, .badge.ANALISANDO { background:#444; color:#ddd; }
+  .badge.PRONTO_PARA_REVISAO { background:#264; color:#9f9; }
+  .badge.ERRO { background:var(--err); color:#fff; }
+  .badge.APROVADO { background:var(--ok); color:#fff; }
+  .badge.REPROVADO { background:#555; color:#ccc; }
+  .badge.PRECISA_DE_AJUSTE, .badge.PRECISA_DE_NOVA_FOTO { background:var(--warn); color:#000; }
+  .conflitos { color:#f88; font-size:12px; margin-top:4px; }
+  #log { font-size:12px; color:#9ab; white-space:pre-wrap; margin-top:10px; }
+  .progress { height:6px; background:#333; border-radius:3px; overflow:hidden; margin-top:10px; }
+  .progress > div { height:100%; background:var(--gold); transition: width .3s; }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h2>🔒 Auditoria IA</h2>
+  <input id="pwd" type="password" placeholder="Senha admin" />
+  <button class="btn-primary" onclick="login()">Entrar</button>
+</div>
+
+<div id="app" style="display:none">
+  <header>
+    <h1>Auditoria de Fotos — Universo da Fé</h1>
+    <div class="stats" id="stats"></div>
+  </header>
+  <main>
+    <div class="btn-row">
+      <button class="btn-primary" onclick="processarProximos10()">▶ PROCESSAR PRÓXIMOS 10</button>
+      <button class="btn-secondary" onclick="syncDrive()">🔄 Sincronizar Drive</button>
+      <button class="btn-secondary" onclick="syncShopify()">🔄 Sincronizar Shopify</button>
+      <button class="btn-secondary" onclick="carregarLoteAtual()">↻ Continuar lote interrompido</button>
+    </div>
+    <div class="progress"><div id="progressBar" style="width:0%"></div></div>
+    <div id="log"></div>
+    <div class="grid" id="grid"></div>
+  </main>
+</div>
+
+<script>
+let PWD = '';
+let currentBatchId = null;
+
+function login() {
+  PWD = document.getElementById('pwd').value;
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  carregarLoteAtual();
+}
+
+function log(msg) {
+  const el = document.getElementById('log');
+  el.textContent = msg + '\n' + el.textContent;
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch('/api/audit/' + path, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', 'X-Admin-Password': PWD, ...(opts.headers || {}) },
+  });
+  if (res.status === 401) { alert('Senha incorreta'); location.reload(); throw new Error('unauthorized'); }
+  return res.json();
+}
+
+async function syncDrive() {
+  log('Sincronizando Drive...');
+  const r = await api('sync-drive', { method: 'POST' });
+  log(`Drive sincronizado: ${r.inserted} novos, ${r.updated} atualizados. ${(r.errors||[]).join('; ')}`);
+}
+
+async function syncShopify() {
+  log('Sincronizando Shopify...');
+  const r = await api('sync-shopify-cache', { method: 'POST' });
+  log(`Shopify sincronizado: ${r.synced} produtos.`);
+}
+
+async function processarProximos10() {
+  log('Selecionando próximos 10...');
+  const start = await api('start-batch', { method: 'POST' });
+  if (start.error) { log('Erro: ' + start.error); return; }
+  currentBatchId = start.batch_id;
+  log(`Lote #${currentBatchId} ${start.resumed ? '(retomado)' : 'criado'}.`);
+  await processarLoop();
+}
+
+async function processarLoop() {
+  if (!currentBatchId) return;
+  let safety = 0;
+  while (safety++ < 30) { // hard cap: nunca trava em loop infinito
+    const r = await api('process-next', { method: 'POST', body: JSON.stringify({ batch_id: currentBatchId }) });
+    if (r.done) { log('Lote concluído.'); break; }
+    log(`Item ${r.item_id}: ${r.status}${r.error ? ' — ' + r.error : ''}`);
+    await renderBatch();
+  }
+  await renderBatch();
+}
+
+async function carregarLoteAtual() {
+  const r = await api('batch-status');
+  if (r.error) { log('Nenhum lote em andamento.'); return; }
+  currentBatchId = r.batch.id;
+  renderBatch();
+}
+
+async function renderBatch() {
+  if (!currentBatchId) return;
+  const r = await api('batch-status?batch_id=' + currentBatchId);
+  if (r.error) return;
+  const { batch, items } = r;
+  document.getElementById('stats').textContent =
+    `Lote #${batch.id} — ${batch.processed_items}/${batch.total_items} processados, ${batch.error_items} erros — ${batch.status}`;
+  document.getElementById('progressBar').style.width = `${(batch.processed_items/batch.total_items*100)||0}%`;
+
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  for (const it of items) {
+    const div = document.createElement('div');
+    div.className = 'card';
+    const thumb = it.thumbnail_link ? it.thumbnail_link.replace(/=s\d+$/, '=s400') : '';
+    div.innerHTML = `
+      <img src="${thumb}" onerror="this.style.opacity=0.2" />
+      <span class="badge ${it.status}">${it.status}</span>
+      <h3>${it.titulo_recomendado || it.produto_identificado || it.file_name}</h3>
+      <div class="field"><b>Arquivo:</b> ${it.file_name}</div>
+      <div class="field"><b>Categoria:</b> ${it.categoria || '-'} | <b>Santo:</b> ${it.santo_devocao || '-'}</div>
+      <div class="field"><b>Material:</b> ${it.material || '-'} | <b>Cor:</b> ${it.cor || '-'}</div>
+      <div class="field"><b>Preço:</b> ${it.preco_valor ?? '-'} (${it.preco_fonte || 'sem fonte'})</div>
+      <div class="field"><b>Shopify match:</b> ${it.shopify_product_id || '-'} (confiança ${(it.confianca_correspondencia ?? 0).toFixed?.(2) ?? it.confianca_correspondencia})</div>
+      ${it.conflitos && it.conflitos.length ? `<div class="conflitos">⚠ ${it.conflitos.join('; ')}</div>` : ''}
+      ${it.descricao_recomendada ? `<div class="field">${it.descricao_recomendada}</div>` : ''}
+      <div class="btn-row">
+        <button class="btn-ok" onclick="acao(${it.id},'APROVAR')">Aprovar</button>
+        <button class="btn-secondary" onclick="acao(${it.id},'CORRIGIR')">Corrigir</button>
+        <button class="btn-err" onclick="acao(${it.id},'REPROVAR')">Reprovar</button>
+        <button class="btn-secondary" onclick="acao(${it.id},'PULAR')">Pular</button>
+        <button class="btn-warn" onclick="acao(${it.id},'SOLICITAR_NOVA_FOTO')">Nova foto</button>
+      </div>
+    `;
+    grid.appendChild(div);
+  }
+}
+
+async function acao(itemId, action) {
+  const r = await api('review-action', { method: 'POST', body: JSON.stringify({ item_id: itemId, action }) });
+  if (r.error === 'aprovacao_bloqueada') {
+    alert('Não pode aprovar: ' + r.reason);
+    return;
+  }
+  await renderBatch();
+}
+</script>
+</body>
+</html>

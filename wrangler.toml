@@ -1,0 +1,8 @@
+name = "universo-da-fe-site"
+compatibility_date = "2026-06-01"
+pages_build_output_dir = "."
+
+[[d1_databases]]
+binding = "DB"
+database_name = "universo-da-fe-auditoria"
+database_id = "9b0a377d-90cb-4a2a-a25c-d845a7240aec"
