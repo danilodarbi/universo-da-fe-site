@@ -40,6 +40,14 @@ export async function onRequest(context) {
     });
   }
 
+  // OpenAI é opcional — se a key não estiver configurada, retorna erro limpo
+  if (!env.OPENAI_API_KEY) {
+    return new Response(JSON.stringify({ error: 'OpenAI não configurado (OPENAI_API_KEY ausente)' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    });
+  }
+
   const { mode, title, description, productType } = body;
 
   const SYSTEM_PROMPT = `Você é um copywriter especializado em artigos católicos para a loja "Universo da Fé".

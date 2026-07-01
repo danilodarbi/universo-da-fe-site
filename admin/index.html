@@ -660,13 +660,18 @@ select.filter-select {
       <div style="background:#fff;border-radius:12px;border:1px solid var(--border);padding:24px;max-width:700px">
         <div id="configStatus"></div>
         <hr style="margin:24px 0;border:none;border-top:1px solid var(--border)">
-        <h3 style="font-family:var(--serif);color:var(--navy);font-size:1.2rem;margin-bottom:12px">Variáveis de ambiente necessárias</h3>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:14px">No Cloudflare Pages → Settings → Environment variables, adicione:</p>
-        <pre style="background:#1a1f3a;color:#c9a84c;padding:16px;border-radius:8px;font-size:12px;overflow-x:auto;line-height:1.7">SHOPIFY_STORE        = sthtec-5u.myshopify.com
-SHOPIFY_ADMIN_TOKEN  = (cole seu token shpat_…)
-OPENAI_API_KEY       = sk-…(sua chave OpenAI)
-ADMIN_PASSWORD       = admin2901</pre>
-        <p style="font-size:12px;color:var(--muted);margin-top:12px">Após adicionar, faça um novo deploy (qualquer commit dispara). As variáveis ficam disponíveis nas <em>Functions</em>.</p>
+        <h3 style="font-family:var(--serif);color:var(--navy);font-size:1.2rem;margin-bottom:12px">Variáveis de ambiente configuradas</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Cloudflare Pages → Settings → Variables and secrets:</p>
+        <pre style="background:#1a1f3a;color:#c9a84c;padding:16px;border-radius:8px;font-size:12px;overflow-x:auto;line-height:1.9">ADMIN_PASSWORD               Secret  ● obrigatório
+SHOPIFY_SHOP_DOMAIN          Text    ● obrigatório
+SHOPIFY_CLIENT_ID            Secret  ● obrigatório
+SHOPIFY_CLIENT_SECRET        Secret  ● obrigatório
+SHOPIFY_API_VERSION          Text    ○ opcional (padrão: 2025-07)
+GOOGLE_SERVICE_ACCOUNT_JSON  Secret  ● obrigatório (auditoria Drive)
+
+— Binding D1 —
+DB → universo-da-fe-auditoria          ● configurado</pre>
+        <p style="font-size:12px;color:var(--muted);margin-top:12px">OpenAI não é utilizado neste projeto.</p>
       </div>
     </div>
   </div>
@@ -1544,41 +1549,75 @@ document.getElementById('createSubmit').onclick = async () => {
 // ═══════════════════════════════════════════════════
 async function renderConfig() {
   const div = document.getElementById('configStatus');
-  div.innerHTML = '<div class="loading"><div class="spinner"></div><p>Verificando…</p></div>';
+  div.innerHTML = '<div class="loading"><div class="spinner"></div><p>Verificando integrações…</p></div>';
 
-  const checks = [];
+  let result;
+  try {
+    const r = await fetch('/api/config/status', {
+      headers: { 'X-Admin-Password': STATE.password }
+    });
+    result = await r.json();
+  } catch (e) {
+    div.innerHTML = `<div style="color:var(--danger);padding:16px">Erro ao verificar: ${escapeHtml(e.message)}</div>`;
+    return;
+  }
+
+  // Monta linhas de status
+  const rows = [];
 
   // Shopify
-  try {
-    await shopify('{ shop { name } }');
-    checks.push({ name: 'Shopify Admin API', ok: true, msg: 'Conectado' });
-  } catch (e) {
-    checks.push({ name: 'Shopify Admin API', ok: false, msg: e.message });
-  }
+  const sh = result.shopify || {};
+  rows.push({
+    group: 'Shopify Admin API',
+    items: [
+      { label: 'Autenticação OAuth', ok: sh.ok, msg: sh.msg || '' },
+      { label: 'Loja', ok: sh.ok, msg: sh.shop || '—', dim: true },
+      { label: 'Escopos', ok: sh.ok, msg: sh.scopes || '—', dim: true },
+    ]
+  });
 
-  // OpenAI (light test)
-  try {
-    const r = await fetch('/api/ai', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Password': STATE.password },
-      body: JSON.stringify({ mode: 'rewrite_title', title: 'teste', productType: 'teste' })
-    });
-    const data = await r.json();
-    if (data.error) throw new Error(data.error);
-    checks.push({ name: 'OpenAI (GPT)', ok: true, msg: 'Conectado' });
-  } catch (e) {
-    checks.push({ name: 'OpenAI (GPT)', ok: false, msg: e.message });
+  // Google Drive
+  const gd = result.google_drive || {};
+  const driveItems = [
+    { label: 'Service Account', ok: gd.ok, msg: gd.msg || '' },
+  ];
+  if (gd.service_account) {
+    driveItems.push({ label: 'Conta', ok: true, msg: gd.service_account, dim: true });
   }
+  if (gd.pastas) {
+    for (const p of gd.pastas) {
+      driveItems.push({
+        label: p.nome,
+        ok: p.acessivel,
+        msg: p.acessivel ? `${p.arquivos_na_pagina} arquivo(s) visíveis` : (p.erro || 'sem acesso'),
+        dim: p.acessivel,
+      });
+    }
+  }
+  rows.push({ group: 'Google Drive', items: driveItems });
 
-  div.innerHTML = checks.map(c => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)">
-      <div>
-        <div style="font-weight:600;color:var(--navy);font-family:var(--serif);font-size:1.1rem">${c.name}</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:2px">${c.msg}</div>
-      </div>
-      <div style="background:${c.ok ? 'var(--success)' : 'var(--danger)'};color:#fff;padding:5px 12px;border-radius:100px;font-size:11px;font-weight:700;letter-spacing:0.05em">
-        ${c.ok ? '● OK' : '● FALHA'}
-      </div>
+  // D1
+  const d1 = result.d1 || {};
+  rows.push({
+    group: 'Banco de Dados (D1)',
+    items: [{ label: 'Binding DB', ok: d1.ok, msg: d1.msg || '' }]
+  });
+
+  const borderStyle = 'border-bottom:1px solid var(--border)';
+  div.innerHTML = rows.map(({ group, items }) => `
+    <div style="${borderStyle};padding-bottom:18px;margin-bottom:18px">
+      <div style="font-family:var(--serif);font-size:1.05rem;font-weight:600;color:var(--navy);margin-bottom:10px;letter-spacing:0.01em">${group}</div>
+      ${items.map(item => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 8px 12px;${item.dim ? '' : ''}">
+          <div>
+            <span style="font-size:13px;color:${item.dim ? 'var(--muted)' : 'var(--navy)'};font-weight:${item.dim ? 400 : 500}">${escapeHtml(item.label)}</span>
+            ${item.msg ? `<span style="font-size:12px;color:var(--muted);margin-left:8px">${escapeHtml(item.msg)}</span>` : ''}
+          </div>
+          <div style="background:${item.ok ? 'var(--success)' : 'var(--danger)'};color:#fff;padding:3px 10px;border-radius:100px;font-size:10px;font-weight:700;letter-spacing:0.05em;white-space:nowrap;margin-left:12px">
+            ${item.ok ? '● OK' : '● FALHA'}
+          </div>
+        </div>
+      `).join('')}
     </div>
   `).join('');
 }
