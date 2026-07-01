@@ -152,7 +152,49 @@ export async function fetchThumbnailAsBase64(env, thumbnailLink) {
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error(`Falha ao baixar thumbnail: ${res.status}`);
   const buf = await res.arrayBuffer();
-  return base64url(buf).replace(/-/g, '+').replace(/_/g, '/'); // base64 padrão p/ OpenAI
+  const b64 = base64url(buf).replace(/-/g, '+').replace(/_/g, '/');
+  // Adiciona padding = necessário para Anthropic/OpenAI
+  return b64 + '='.repeat((4 - b64.length % 4) % 4);
+}
+
+// ---- Anthropic Claude Vision ----
+
+export async function analyzePhotoWithAnthropic(env, { imageBase64 }) {
+  if (!env.ANTHROPIC_API_KEY) return null;
+
+  const prompt = `Você está analisando uma foto de produto de uma loja católica brasileira chamada "Universo da Fé".
+Descreva em 1 frase CURTA e OBJETIVA o que é este produto:
+- Tipo exato: imagem/estátua, terço, escapulário, quadro/gravura, chaveiro, pulseira, dezena, kit, etc
+- Santo ou devoção representado(a) — seja específico (ex: "São Bento", "Nossa Senhora Aparecida", "Divino Espírito Santo")
+- Material se visível (resina, madeira, metal, tecido, acrílico...)
+- Tamanho estimado se der para inferir pelo contexto
+Formato: "[Tipo] de [Santo/Devoção] em [material], [tamanho se visível]."
+Exemplos: "Imagem de São Bento em resina, aproximadamente 30cm." / "Terço de Nossa Senhora com contas azuis e crucifixo dourado." / "Escapulário de Nossa Senhora do Carmo com cordão marrom."
+Seja direto e objetivo. Sem "Esta foto mostra...", sem introduções.`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 200,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 } },
+          { type: 'text', text: prompt },
+        ],
+      }],
+    }),
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(`Anthropic: ${data.error?.message || res.status}`);
+  return data.content?.[0]?.text?.trim() || null;
 }
 
 // ---- OpenAI ----

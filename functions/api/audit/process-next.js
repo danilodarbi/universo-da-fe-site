@@ -2,14 +2,10 @@
 // POST /api/audit/process-next  { batch_id }
 //
 // Processa UM item pendente do lote por chamada.
-// Sem análise automática por IA — valida acesso ao Drive e prepara o item
-// para revisão manual na tela de auditoria.
-//
-// Fluxo:
-//   1. Pega o próximo item PENDENTE do lote
-//   2. Verifica que o thumbnail do Drive está acessível
-//   3. Grava status PRONTO_PARA_REVISAO + necessita_revisao = 1
-//   4. O revisor humano faz a correspondência produto↔foto na tela de revisão
+// Se ANTHROPIC_API_KEY estiver configurado: analisa a foto com Claude Haiku
+// e gera descrição do produto. A descrição também é usada para re-buscar
+// candidatos Shopify por similaridade textual (muito melhor que nome de arquivo).
+// Sem a key: prepara para revisão manual com candidatos por nome de arquivo.
 
 import {
   jsonResponse,
@@ -17,6 +13,7 @@ import {
   requireAuth,
   topCandidates,
   fetchThumbnailAsBase64,
+  analyzePhotoWithAnthropic,
 } from './_shared.js';
 
 export async function onRequest(context) {
@@ -31,46 +28,50 @@ export async function onRequest(context) {
 
   const item = await env.DB.prepare(
     `SELECT * FROM audit_records WHERE batch_id = ? AND status = 'PENDENTE' ORDER BY sort_key ASC LIMIT 1`
-  )
-    .bind(batchId)
-    .first();
+  ).bind(batchId).first();
 
   if (!item) {
-    // Verifica se o lote pode ser fechado
     const remaining = await env.DB.prepare(
       `SELECT COUNT(*) as n FROM audit_records WHERE batch_id = ? AND status = 'PENDENTE'`
-    )
-      .bind(batchId)
-      .first();
+    ).bind(batchId).first();
     if (remaining.n === 0) {
       await env.DB.prepare(
         `UPDATE batches SET status = 'CONCLUIDO', updated_at = datetime('now') WHERE id = ?`
-      )
-        .bind(batchId)
-        .run();
+      ).bind(batchId).run();
     }
     return jsonResponse({ done: true });
   }
 
   await env.DB.prepare(
     `UPDATE audit_records SET status = 'ANALISANDO', updated_at = datetime('now') WHERE id = ?`
-  )
-    .bind(item.id)
-    .run();
+  ).bind(item.id).run();
 
   try {
     if (!item.thumbnail_link) {
       throw new Error('Sem thumbnail do Drive — rode sync-drive primeiro ou verifique o arquivo');
     }
 
-    // Verifica acesso ao Drive baixando o thumbnail (confirma autenticação e arquivo)
-    await fetchThumbnailAsBase64(env, item.thumbnail_link);
+    const imageBase64 = await fetchThumbnailAsBase64(env, item.thumbnail_link);
 
-    // Busca candidatos Shopify por similaridade de nome de arquivo (base para revisão manual)
+    // Análise de visão com Claude Haiku (se key disponível)
+    let descricao = null;
+    let aiUsed = false;
+    if (env.ANTHROPIC_API_KEY) {
+      try {
+        descricao = await analyzePhotoWithAnthropic(env, { imageBase64 });
+        aiUsed = true;
+      } catch (aiErr) {
+        // não bloqueia o fluxo — só anota o erro
+        descricao = null;
+      }
+    }
+
+    // Busca candidatos: usa descrição AI (muito mais precisa) ou nome do arquivo
     const candidatesRows = await env.DB.prepare(
       `SELECT product_id, title, product_type FROM shopify_products_cache`
     ).all();
-    const candidates = topCandidates(item.file_name, candidatesRows.results || [], 3);
+    const queryText = descricao || item.file_name;
+    const candidates = topCandidates(queryText, candidatesRows.results || [], 3);
 
     const candidatesJson = JSON.stringify(
       candidates.map(c => ({
@@ -80,41 +81,35 @@ export async function onRequest(context) {
       }))
     );
 
-    // Grava pronto para revisão manual — sem IA, revisor decide tudo
     await env.DB.prepare(
       `UPDATE audit_records SET
         status = 'PRONTO_PARA_REVISAO',
+        produto_identificado = ?,
         ai_result_json = ?,
         necessita_revisao = 1,
         updated_at = datetime('now')
        WHERE id = ?`
-    )
-      .bind(candidatesJson, item.id)
-      .run();
+    ).bind(descricao || null, candidatesJson, item.id).run();
 
     await env.DB.prepare(
       `UPDATE batches SET processed_items = processed_items + 1, updated_at = datetime('now') WHERE id = ?`
-    )
-      .bind(batchId)
-      .run();
+    ).bind(batchId).run();
 
     return jsonResponse({
       done: false,
       item_id: item.id,
       status: 'PRONTO_PARA_REVISAO',
+      descricao,
+      ai_used: aiUsed,
       candidates: candidates.length,
     });
   } catch (e) {
     await env.DB.prepare(
       `UPDATE audit_records SET status = 'ERRO', ai_error = ?, updated_at = datetime('now') WHERE id = ?`
-    )
-      .bind(e.message, item.id)
-      .run();
+    ).bind(e.message, item.id).run();
     await env.DB.prepare(
       `UPDATE batches SET error_items = error_items + 1, updated_at = datetime('now') WHERE id = ?`
-    )
-      .bind(batchId)
-      .run();
+    ).bind(batchId).run();
     return jsonResponse({ done: false, item_id: item.id, status: 'ERRO', error: e.message });
   }
 }
