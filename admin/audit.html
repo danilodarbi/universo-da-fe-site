@@ -2,539 +2,472 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
-<title>Auditoria de Fotos — Universo da Fé</title>
+<title>Auditoria — Universo da Fé</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root {
-  --navy:#1a2744; --gold:#c9a84c; --gold-dim:#7a6128;
-  --bg:#0d0f14; --surface:#161923; --surface2:#1e2330; --border:#252b3b;
-  --text:#d8dde8; --muted:#6b7591;
-  --ok:#1f6b3a; --ok-fg:#4ade80;
-  --warn:#5a3e00; --warn-fg:#fbbf24;
-  --err:#7a1e1e; --err-fg:#f87171;
-  --sel-bg:#1a3a5c; --sel-border:#3b82f6;
+:root{
+  --gold:#c9a84c;--gold-dim:#7a6128;
+  --bg:#0d0f14;--surf:#161923;--surf2:#1e2330;--border:#252b3b;
+  --text:#d8dde8;--muted:#6b7591;
+  --ok:#1f6b3a;--ok-fg:#4ade80;
+  --warn:#5a3e00;--warn-fg:#fbbf24;
+  --err:#7a1e1e;--err-fg:#f87171;
+  --blue-bg:#1a3a5c;--blue:#3b82f6;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px}
 
 /* Login */
 #login{display:flex;align-items:center;justify-content:center;min-height:100vh}
-.login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:48px 40px;width:360px;text-align:center}
-.login-box .cross{font-size:32px;margin-bottom:20px}
-.login-box h1{font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--gold);margin-bottom:6px}
-.login-box p{color:var(--muted);margin-bottom:28px;font-size:12px}
-.login-box input{width:100%;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-family:'IBM Plex Mono',monospace;margin-bottom:12px;outline:none;transition:border-color .2s}
-.login-box input:focus{border-color:var(--gold)}
-.btn-login{width:100%;padding:12px;background:var(--gold);color:#0d0f14;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .2s}
-.btn-login:hover{opacity:.85}
+.lbox{background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:48px 40px;width:340px;text-align:center}
+.lbox .c{font-size:32px;margin-bottom:18px}
+.lbox h1{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--gold);margin-bottom:5px}
+.lbox p{color:var(--muted);font-size:12px;margin-bottom:26px}
+.lbox input{width:100%;padding:11px 13px;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;font-family:'IBM Plex Mono',monospace;margin-bottom:10px;outline:none;transition:border-color .2s}
+.lbox input:focus{border-color:var(--gold)}
+.lbtn{width:100%;padding:11px;background:var(--gold);color:#0d0f14;border:none;border-radius:7px;font-size:14px;font-weight:600;cursor:pointer}
+.lbtn:hover{opacity:.85}
 
 /* App */
 #app{display:none}
-header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
-.hbrand{display:flex;align-items:center;gap:10px}
-.hbrand .cross{color:var(--gold);font-size:18px}
-.hbrand h1{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold);font-weight:600}
-.hstats{display:flex;gap:20px;font-size:11px;font-family:'IBM Plex Mono',monospace}
-.stat{display:flex;flex-direction:column;align-items:flex-end;gap:1px}
-.stat-v{font-size:14px;font-weight:500}
-.stat-l{color:var(--muted)}
-.header-link{color:var(--muted);font-size:12px;text-decoration:none}
-.header-link:hover{color:var(--text)}
+header{background:var(--surf);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:54px;position:sticky;top:0;z-index:100}
+.hb{display:flex;align-items:center;gap:10px}
+.hb .c{color:var(--gold);font-size:18px}
+.hb h1{font-family:'Cormorant Garamond',serif;font-size:17px;color:var(--gold);font-weight:600}
+.hs{display:flex;gap:18px;font-size:11px;font-family:'IBM Plex Mono',monospace}
+.sv{font-size:14px;font-weight:500}
+.sl{color:var(--muted);font-size:10px}
+.hl{color:var(--muted);font-size:12px;text-decoration:none}
+.hl:hover{color:var(--text)}
 
-/* Controls */
-.controls{padding:12px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--surface)}
-.btn{padding:7px 14px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;letter-spacing:.02em;display:inline-flex;align-items:center;gap:5px;transition:opacity .15s,transform .1s}
+.ctrl{padding:11px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--surf)}
+.btn{padding:7px 14px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;transition:opacity .15s}
 .btn:hover{opacity:.85}
 .btn:active{transform:scale(.97)}
-.btn-gold{background:var(--gold);color:#0d0f14}
-.btn-dim{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
-.btn-dim:hover{border-color:var(--gold-dim)}
-.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
-.sep{width:1px;height:22px;background:var(--border);margin:0 2px}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.bg{background:var(--gold);color:#0d0f14}
+.bd{background:var(--surf2);color:var(--text);border:1px solid var(--border)}
+.bd:hover{border-color:var(--gold-dim)}
+.sep{width:1px;height:20px;background:var(--border);margin:0 2px}
 
-/* Progress + Log */
-.progress-wrap{height:3px;background:var(--surface2)}
-.progress-bar{height:100%;background:var(--gold);transition:width .4s;width:0%}
-#log-wrap{padding:8px 24px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border);min-height:30px;max-height:72px;overflow-y:auto;background:var(--bg)}
+.pw{height:3px;background:var(--surf2)}
+.pb{height:100%;background:var(--gold);transition:width .4s;width:0%}
+#lw{padding:7px 24px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border);min-height:28px;max-height:68px;overflow-y:auto;background:var(--bg)}
 .ll{line-height:1.6}
 .ll.ok{color:var(--ok-fg)}
-.ll.err{color:var(--err-fg)}
+.ll.er{color:var(--err-fg)}
 
-/* Main */
 main{padding:20px 24px;max-width:1400px;margin:0 auto}
-.section-hd{display:flex;align-items:baseline;gap:12px;margin-bottom:14px;margin-top:24px}
-.section-title{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold);font-weight:400}
-.section-sub{color:var(--muted);font-size:11px}
-.empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
-.empty-state h2{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--text);margin-bottom:10px;font-weight:400}
-.empty-state p{max-width:360px;margin:0 auto;line-height:1.6;font-size:12px}
-.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px}
-@keyframes spin{to{transform:rotate(360deg)}}
+.sh{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;margin-top:20px}
+.st{font-family:'Cormorant Garamond',serif;font-size:17px;color:var(--gold);font-weight:400}
+.ss{color:var(--muted);font-size:11px}
+.es{text-align:center;padding:60px 20px;color:var(--muted)}
+.es h2{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--text);margin-bottom:10px;font-weight:400}
+.es p{max-width:340px;margin:0 auto;line-height:1.7;font-size:12px}
 
 /* Grid */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
 
 /* Card */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .2s}
+.card{background:var(--surf);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .2s}
 .card:hover{border-color:var(--gold-dim)}
-.card.resolved{opacity:.55}
-.card-img{width:100%;height:190px;object-fit:contain;background:#080a0e;display:block;cursor:zoom-in}
-.card-img-ph{width:100%;height:190px;background:#080a0e;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;font-family:'IBM Plex Mono',monospace}
-.card-body{padding:12px;flex:1;display:flex;flex-direction:column;gap:10px}
+.card.res{opacity:.52}
+.ci{width:100%;height:185px;object-fit:contain;background:#070910;display:block;cursor:zoom-in}
+.ci-ph{width:100%;height:185px;background:#070910;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px}
+.cb{padding:12px;flex:1;display:flex;flex-direction:column;gap:9px}
 
-/* AI Description */
-.ai-desc{font-size:12.5px;color:var(--text);line-height:1.5;padding:9px 11px;background:var(--surface2);border-radius:7px;border-left:2px solid var(--gold)}
-.ai-desc.loading{color:var(--muted);font-style:italic;font-size:11px}
-.ai-desc.none{color:var(--muted);font-style:italic;font-size:11px}
+/* Description banner */
+.desc-banner{padding:9px 11px;background:var(--surf2);border-left:2px solid var(--gold);border-radius:0 7px 7px 0;font-size:12px;color:var(--text);line-height:1.5}
+.desc-none{padding:8px 11px;font-size:11px;color:var(--muted);font-style:italic;border-left:2px solid var(--border);background:var(--surf2);border-radius:0 7px 7px 0}
 
-/* Card meta */
-.card-meta{display:flex;align-items:center;justify-content:space-between;gap:6px}
-.card-fn{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}
-.cbadge{font-size:10px;font-weight:700;letter-spacing:.05em;padding:2px 8px;border-radius:10px;white-space:nowrap}
-.st-PENDENTE,.st-ANALISANDO{background:var(--surface2);color:var(--muted)}
+/* Briefing grid */
+.bfg{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.bfi{padding:7px 9px;background:var(--bg);border-radius:6px;border:1px solid var(--border)}
+.bfi-l{font-size:9px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.bfi-v{font-size:12px;color:var(--text);font-weight:500}
+.bfi-v.null{color:var(--muted);font-style:italic;font-weight:400;font-size:11px}
+.bfi.price{border-color:var(--gold-dim);background:#1a1500}
+.bfi.price .bfi-v{color:var(--gold);font-size:13px;font-weight:600}
+.bfi.full{grid-column:1/-1}
+
+/* Shopify title/desc suggestion */
+.shopify-sug{padding:9px 11px;background:#0d1a12;border:1px solid #2e5c3a;border-radius:7px;font-size:11.5px}
+.shopify-sug-l{font-size:9px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#4ade8066;margin-bottom:4px}
+.shopify-sug-title{color:var(--ok-fg);font-weight:600;margin-bottom:4px;font-size:12px}
+.shopify-sug-desc{color:#9fd3b0;font-size:11px;line-height:1.5}
+
+/* Status badge */
+.cm{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.fn{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px}
+.badge{font-size:9px;font-weight:700;letter-spacing:.05em;padding:2px 8px;border-radius:10px;white-space:nowrap}
 .st-PRONTO_PARA_REVISAO{background:var(--ok);color:var(--ok-fg)}
 .st-APROVADO{background:#14432a;color:#4ade80}
 .st-REPROVADO{background:#2a1414;color:#f87171}
 .st-PRECISA_DE_NOVA_FOTO{background:var(--warn);color:var(--warn-fg)}
 .st-PRECISA_DE_AJUSTE{background:#2a2000;color:var(--warn-fg)}
 .st-ERRO{background:var(--err);color:var(--err-fg)}
+.st-PENDENTE,.st-ANALISANDO{background:var(--surf2);color:var(--muted)}
 
 /* Candidates */
-.cands-label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
-.cands-list{display:flex;flex-direction:column;gap:5px}
-.cand-btn{width:100%;text-align:left;padding:8px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11.5px;font-family:'Inter',sans-serif;transition:border-color .15s,background .15s}
-.cand-btn:hover{border-color:var(--gold-dim);background:#1c2233}
-.cand-btn.selected{border-color:var(--sel-border);background:var(--sel-bg)}
-.cand-score{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);white-space:nowrap;flex-shrink:0}
-.no-cands{font-size:11px;color:var(--muted);font-style:italic;padding:4px 0}
+.cl{font-size:9px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.clist{display:flex;flex-direction:column;gap:4px}
+.cbtn{width:100%;text-align:left;padding:7px 10px;background:var(--surf2);border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;transition:border-color .15s,background .15s}
+.cbtn:hover{border-color:var(--gold-dim);background:#1c2233}
+.cbtn.sel{border-color:var(--blue);background:var(--blue-bg)}
+.cscore{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);white-space:nowrap}
+.cnone{font-size:11px;color:var(--muted);font-style:italic;padding:3px 0}
+.linked{padding:8px 10px;background:#14261a;border:1px solid #2e5c3a;border-radius:6px;font-size:11.5px;color:var(--ok-fg)}
+.linked-l{font-size:9px;font-weight:600;color:#4ade8055;letter-spacing:.07em;text-transform:uppercase;margin-bottom:2px}
 
-/* Linked */
-.linked-box{padding:9px 11px;background:#14261a;border:1px solid #2e5c3a;border-radius:7px;font-size:12px;color:var(--ok-fg)}
-.linked-lbl{font-size:10px;font-weight:600;color:#4ade8066;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px}
-
-/* Error */
-.err-msg{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--err-fg);padding:8px;background:var(--err);border-radius:6px;word-break:break-word}
-
-/* Edit panel */
-.edit-panel{background:var(--bg);border:1px solid var(--sel-border);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px}
-.edit-panel-title{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.edit-search{width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;outline:none;transition:border-color .2s}
-.edit-search:focus{border-color:var(--gold)}
-.edit-results{display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto}
-.edit-result-btn{width:100%;text-align:left;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);cursor:pointer;font-size:11.5px;transition:border-color .15s}
-.edit-result-btn:hover{border-color:var(--gold-dim)}
-.edit-result-btn.selected{border-color:var(--sel-border);background:var(--sel-bg)}
-.edit-result-type{color:var(--muted);font-size:10px;margin-left:5px}
-.edit-searching{color:var(--muted);font-size:11px;font-style:italic;padding:6px 0}
+/* Edit */
+.ep{background:var(--bg);border:1px solid var(--blue);border-radius:8px;padding:11px;display:flex;flex-direction:column;gap:7px}
+.ep-l{font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.es-inp{width:100%;padding:7px 9px;background:var(--surf2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;outline:none;transition:border-color .2s}
+.es-inp:focus{border-color:var(--gold)}
+.er-list{display:flex;flex-direction:column;gap:3px;max-height:150px;overflow-y:auto}
+.er-btn{width:100%;text-align:left;padding:6px 9px;background:var(--surf2);border:1px solid var(--border);border-radius:5px;color:var(--text);cursor:pointer;font-size:11px;transition:border-color .15s}
+.er-btn:hover{border-color:var(--gold-dim)}
+.er-btn.sel{border-color:var(--blue);background:var(--blue-bg)}
+.er-hint{color:var(--muted);font-size:11px;font-style:italic;padding:5px 0}
 
 /* Actions */
-.card-actions{display:flex;gap:6px;flex-wrap:wrap}
-.act-approve{padding:8px 14px;background:var(--ok);color:var(--ok-fg);border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;flex:1;transition:opacity .15s}
-.act-approve:disabled{opacity:.3;cursor:not-allowed}
-.act-approve:not(:disabled):hover{opacity:.85}
-.act-skip{padding:8px 11px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;font-weight:600}
-.act-skip:hover{color:var(--text)}
-.act-reject{padding:8px 11px;background:var(--err);color:var(--err-fg);border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600}
-.act-reject:hover{opacity:.85}
-.act-nova{padding:8px 11px;background:var(--warn);color:var(--warn-fg);border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600}
-.act-nova:hover{opacity:.85}
-.act-edit{padding:8px 11px;background:var(--surface2);color:var(--text);border:1px solid var(--sel-border);border-radius:6px;cursor:pointer;font-size:12px;font-weight:600}
-.act-edit:hover{background:var(--sel-bg)}
-.resolved-lbl{text-align:center;padding:5px;font-size:11px;font-weight:600;letter-spacing:.05em;color:var(--muted)}
+.acts{display:flex;gap:5px;flex-wrap:wrap}
+.aa{padding:8px 13px;background:var(--ok);color:var(--ok-fg);border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;flex:1;transition:opacity .15s}
+.aa:disabled{opacity:.3;cursor:not-allowed}
+.aa:not(:disabled):hover{opacity:.85}
+.ask{padding:8px 10px;background:var(--surf2);color:var(--muted);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;font-weight:600}
+.ask:hover{color:var(--text)}
+.arj{padding:8px 10px;background:var(--err);color:var(--err-fg);border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600}
+.arj:hover{opacity:.85}
+.anf{padding:8px 10px;background:var(--warn);color:var(--warn-fg);border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600}
+.ae{padding:8px 10px;background:var(--surf2);color:var(--text);border:1px solid var(--blue);border-radius:6px;cursor:pointer;font-size:12px;font-weight:600}
+.ae:hover{background:var(--blue-bg)}
+.res-l{text-align:center;padding:4px;font-size:11px;font-weight:600;letter-spacing:.05em;color:var(--muted)}
+.err-msg{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--err-fg);padding:7px;background:var(--err);border-radius:5px;word-break:break-all}
 
-/* Scrollbar */
 ::-webkit-scrollbar{width:4px;height:4px}
-::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 </style>
 </head>
 <body>
 
 <div id="login">
-  <div class="login-box">
-    <div class="cross">✝</div>
+  <div class="lbox">
+    <div class="c">✝</div>
     <h1>Universo da Fé</h1>
     <p>Sistema de Auditoria de Fotos</p>
-    <input id="pwd" type="password" placeholder="Senha admin" autocomplete="current-password" />
-    <button class="btn-login" onclick="login()">Entrar</button>
+    <input id="pwd" type="password" placeholder="Senha admin" autocomplete="current-password"/>
+    <button class="lbtn" onclick="login()">Entrar</button>
   </div>
 </div>
 
 <div id="app">
   <header>
-    <div class="hbrand"><span class="cross">✝</span><h1>Auditoria de Fotos</h1></div>
-    <div class="hstats" id="hStats"></div>
-    <a href="/admin/" class="header-link">← Painel</a>
+    <div class="hb"><span class="c">✝</span><h1>Auditoria de Fotos</h1></div>
+    <div class="hs" id="hs"></div>
+    <a href="/admin/" class="hl">← Painel</a>
   </header>
-  <div class="controls">
-    <button class="btn btn-gold" onclick="processarProximos10()" id="btnProc">▶ Processar próximos 10</button>
+  <div class="ctrl">
+    <button class="btn bg" onclick="processarProximos10()" id="btnP">▶ Processar próximos 10</button>
     <div class="sep"></div>
-    <button class="btn btn-dim" onclick="syncDrive()">🔄 Drive</button>
-    <button class="btn btn-dim" onclick="syncShopify()">🔄 Shopify</button>
+    <button class="btn bd" onclick="syncDrive()">🔄 Drive</button>
+    <button class="btn bd" onclick="syncShopify()">🔄 Shopify</button>
     <div class="sep"></div>
-    <button class="btn btn-dim" onclick="carregarLoteAtual()">↻ Continuar lote</button>
+    <button class="btn bd" onclick="carregarLote()">↻ Continuar lote</button>
   </div>
-  <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
-  <div id="log-wrap"></div>
+  <div class="pw"><div class="pb" id="pb"></div></div>
+  <div id="lw"></div>
   <main>
-    <div id="mainContent">
-      <div class="empty-state">
+    <div id="mc">
+      <div class="es">
         <h2>Pronto para auditar</h2>
-        <p>1. Clique <strong>🔄 Drive</strong> e <strong>🔄 Shopify</strong> para sincronizar uma vez.<br>2. Clique <strong>▶ Processar próximos 10</strong> para analisar as fotos.</p>
+        <p>1. Clique <strong>🔄 Drive</strong> e <strong>🔄 Shopify</strong> para sincronizar.<br>
+           2. Clique <strong>▶ Processar próximos 10</strong> — o Claude analisa cada foto.</p>
       </div>
     </div>
   </main>
 </div>
 
 <script>
-let PWD = '';
-let currentBatchId = null;
-let processing = false;
-const selections = {}; // item_id → {product_id, title}
-const editOpen = {};   // item_id → bool
-const editSelections = {}; // item_id → {product_id, title} (from edit panel)
+let PWD='', batchId=null, busy=false;
+const SELS={}, ESELS={}, EOPEN={};
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
-function login() {
-  PWD = document.getElementById('pwd').value.trim();
-  if (!PWD) return;
-  document.getElementById('login').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  carregarLoteAtual();
+function login(){
+  PWD=document.getElementById('pwd').value.trim();
+  if(!PWD)return;
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').style.display='block';
+  carregarLote();
 }
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && document.getElementById('login').style.display !== 'none') login();
-});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('login').style.display!=='none')login();});
 
-// ── API ───────────────────────────────────────────────────────────────────────
-async function api(path, opts = {}) {
-  const res = await fetch('/api/audit/' + path, {
-    ...opts,
-    headers: { 'Content-Type': 'application/json', 'X-Admin-Password': PWD, ...(opts.headers || {}) },
-  });
-  if (res.status === 401) { alert('Senha incorreta'); location.reload(); throw new Error('unauthorized'); }
-  return res.json();
+async function api(path,opts={}){
+  const r=await fetch('/api/audit/'+path,{...opts,headers:{'Content-Type':'application/json','X-Admin-Password':PWD,...(opts.headers||{})}});
+  if(r.status===401){alert('Senha incorreta');location.reload();throw new Error('unauth');}
+  return r.json();
 }
 
-// ── Log ───────────────────────────────────────────────────────────────────────
-function log(msg, type = '') {
-  const wrap = document.getElementById('log-wrap');
-  const line = document.createElement('div');
-  line.className = 'll' + (type ? ' ' + type : '');
-  const ts = new Date().toTimeString().slice(0, 8);
-  line.textContent = `[${ts}] ${msg}`;
-  wrap.prepend(line);
-  while (wrap.children.length > 25) wrap.removeChild(wrap.lastChild);
+function log(msg,t=''){
+  const w=document.getElementById('lw');
+  const d=document.createElement('div');
+  d.className='ll'+(t?' '+t:'');
+  d.textContent=`[${new Date().toTimeString().slice(0,8)}] ${msg}`;
+  w.prepend(d);
+  while(w.children.length>25)w.removeChild(w.lastChild);
 }
 
-// ── Sync ──────────────────────────────────────────────────────────────────────
-async function syncDrive() {
+async function syncDrive(){
   log('Sincronizando Drive...');
-  try {
-    const r = await api('sync-drive', { method: 'POST' });
-    if (r.errors?.length) log(`Drive: ${r.inserted} novos, ${r.updated} atualizados — ${r.errors.join('; ')}`, 'err');
-    else log(`Drive: ${r.inserted} novos, ${r.updated} atualizados.`, 'ok');
-  } catch(e) { log('Erro Drive: ' + e.message, 'err'); }
+  try{const r=await api('sync-drive',{method:'POST'});
+    if(r.errors?.length)log(`Drive: ${r.inserted} novos, ${r.updated} att — ${r.errors.join('; ')}`,'er');
+    else log(`Drive: ${r.inserted} novos, ${r.updated} atualizados.`,'ok');
+  }catch(e){log('Erro Drive: '+e.message,'er');}
 }
 
-async function syncShopify() {
+async function syncShopify(){
   log('Sincronizando Shopify...');
-  try {
-    const r = await api('sync-shopify-cache', { method: 'POST' });
-    if (r.error) log('Erro Shopify: ' + r.error, 'err');
-    else log(`Shopify: ${r.synced} produtos.`, 'ok');
-  } catch(e) { log('Erro Shopify: ' + e.message, 'err'); }
+  try{const r=await api('sync-shopify-cache',{method:'POST'});
+    if(r.error)log('Erro Shopify: '+r.error,'er');
+    else log(`Shopify: ${r.synced} produtos.`,'ok');
+  }catch(e){log('Erro Shopify: '+e.message,'er');}
 }
 
-// ── Process ───────────────────────────────────────────────────────────────────
-async function processarProximos10() {
-  if (processing) return;
-  processing = true;
-  const btn = document.getElementById('btnProc');
-  btn.disabled = true;
-  btn.textContent = '⏳ Analisando...';
-  log('Criando lote e analisando fotos...');
-  try {
-    const start = await api('start-batch', { method: 'POST' });
-    if (start.error) { log('Erro: ' + start.error, 'err'); return; }
-    currentBatchId = start.batch_id;
-    log(`Lote #${currentBatchId} ${start.resumed ? '(retomado)' : 'criado'}.`, 'ok');
-    let safety = 0;
-    while (safety++ < 30) {
-      const r = await api('process-next', { method: 'POST', body: JSON.stringify({ batch_id: currentBatchId }) });
-      if (r.error && r.error !== 'sem_registros_pendentes') { log('Erro: ' + r.error, 'err'); break; }
-      if (r.done) { log('Lote pronto. Revise as fotos abaixo.', 'ok'); break; }
-      const desc = r.descricao ? ` — "${r.descricao.slice(0, 50)}${r.descricao.length > 50 ? '…' : ''}"` : '';
+async function processarProximos10(){
+  if(busy)return;
+  busy=true;
+  const btn=document.getElementById('btnP');
+  btn.disabled=true;btn.textContent='⏳ Analisando...';
+  log('Analisando fotos com IA...');
+  try{
+    const s=await api('start-batch',{method:'POST'});
+    if(s.error){log('Erro: '+s.error,'er');return;}
+    batchId=s.batch_id;
+    log(`Lote #${batchId} ${s.resumed?'(retomado)':'criado'}.`,'ok');
+    for(let i=0;i<30;i++){
+      const r=await api('process-next',{method:'POST',body:JSON.stringify({batch_id:batchId})});
+      if(r.error){log('Erro: '+r.error,'er');break;}
+      if(r.done){log('Lote pronto. Revise abaixo.','ok');break;}
+      const desc=r.descricao?` — "${r.descricao.slice(0,55)}${r.descricao.length>55?'…':''}"`:' (sem IA)';
       log(`Foto ${r.item_id}${desc}`);
-      await renderBatch();
+      await render();
     }
-    await renderBatch();
-  } catch(e) { log('Erro: ' + e.message, 'err'); }
-  finally {
-    processing = false;
-    btn.disabled = false;
-    btn.textContent = '▶ Processar próximos 10';
-  }
+    await render();
+  }catch(e){log('Erro: '+e.message,'er');}
+  finally{busy=false;btn.disabled=false;btn.textContent='▶ Processar próximos 10';}
 }
 
-// ── Load / Render ─────────────────────────────────────────────────────────────
-async function carregarLoteAtual() {
-  try {
-    const r = await api('batch-status');
-    if (r.error) return;
-    currentBatchId = r.batch.id;
-    await renderBatch();
-  } catch {}
+async function carregarLote(){
+  try{const r=await api('batch-status');if(r.error)return;batchId=r.batch.id;await render();}catch{}
 }
 
-async function renderBatch() {
-  if (!currentBatchId) return;
-  const r = await api('batch-status?batch_id=' + currentBatchId);
-  if (r.error) return;
-  const { batch, items } = r;
-
-  const pct = batch.total_items ? Math.round(batch.processed_items / batch.total_items * 100) : 0;
-  document.getElementById('progressBar').style.width = pct + '%';
-
-  document.getElementById('hStats').innerHTML = `
-    <div class="stat"><span class="stat-v">${batch.total_items}</span><span class="stat-l">Total</span></div>
-    <div class="stat"><span class="stat-v" style="color:var(--ok-fg)">${batch.processed_items}</span><span class="stat-l">Prontos</span></div>
-    <div class="stat"><span class="stat-v" style="color:var(--warn-fg)">${batch.total_items - batch.processed_items}</span><span class="stat-l">Pendentes</span></div>
-    <div class="stat"><span class="stat-v" style="color:var(--err-fg)">${batch.error_items}</span><span class="stat-l">Erros</span></div>
-  `;
-
-  const pendentes = items.filter(it => ['PRONTO_PARA_REVISAO','ERRO','ANALISANDO','PENDENTE'].includes(it.status));
-  const resolvidos = items.filter(it => ['APROVADO','REPROVADO','PRECISA_DE_AJUSTE','PRECISA_DE_NOVA_FOTO'].includes(it.status));
-
-  let html = '';
-  if (pendentes.length) {
-    html += `<div class="section-hd">
-      <span class="section-title">Aguardando revisão</span>
-      <span class="section-sub">${pendentes.length} foto(s)</span>
-    </div>
-    <div class="grid">${pendentes.map(it => cardHtml(it, false)).join('')}</div>`;
-  }
-  if (resolvidos.length) {
-    html += `<div class="section-hd">
-      <span class="section-title">Resolvidos</span>
-      <span class="section-sub">${resolvidos.length} foto(s)</span>
-    </div>
-    <div class="grid">${resolvidos.map(it => cardHtml(it, true)).join('')}</div>`;
-  }
-  if (!html) html = '<div class="empty-state"><h2>Lote concluído</h2><p>Clique em "Processar próximos 10" para continuar.</p></div>';
-  document.getElementById('mainContent').innerHTML = html;
-  attachEditListeners();
+async function render(){
+  if(!batchId)return;
+  const r=await api('batch-status?batch_id='+batchId);
+  if(r.error)return;
+  const{batch,items}=r;
+  document.getElementById('pb').style.width=(batch.total_items?Math.round(batch.processed_items/batch.total_items*100):0)+'%';
+  document.getElementById('hs').innerHTML=`
+    <div class="stat"><span class="sv">${batch.total_items}</span><span class="sl">Total</span></div>
+    <div class="stat"><span class="sv" style="color:var(--ok-fg)">${batch.processed_items}</span><span class="sl">Prontos</span></div>
+    <div class="stat"><span class="sv" style="color:var(--warn-fg)">${batch.total_items-batch.processed_items}</span><span class="sl">Pendentes</span></div>
+    <div class="stat"><span class="sv" style="color:var(--err-fg)">${batch.error_items}</span><span class="sl">Erros</span></div>`;
+  const pend=items.filter(i=>['PRONTO_PARA_REVISAO','ERRO','ANALISANDO','PENDENTE'].includes(i.status));
+  const res=items.filter(i=>['APROVADO','REPROVADO','PRECISA_DE_AJUSTE','PRECISA_DE_NOVA_FOTO'].includes(i.status));
+  let h='';
+  if(pend.length)h+=`<div class="sh"><span class="st">Aguardando revisão</span><span class="ss">${pend.length} foto(s)</span></div><div class="grid">${pend.map(i=>card(i,false)).join('')}</div>`;
+  if(res.length)h+=`<div class="sh"><span class="st">Resolvidos</span><span class="ss">${res.length} foto(s)</span></div><div class="grid">${res.map(i=>card(i,true)).join('')}</div>`;
+  if(!h)h='<div class="es"><h2>Lote concluído</h2><p>Clique em "Processar próximos 10" para continuar.</p></div>';
+  document.getElementById('mc').innerHTML=h;
 }
 
 // ── Card ──────────────────────────────────────────────────────────────────────
-function cardHtml(it, resolved) {
-  const thumb = it.thumbnail_link ? it.thumbnail_link.replace(/=s\d+$/, '=s500') : '';
-  const imgHtml = thumb
-    ? `<img class="card-img" src="${esc(thumb)}" onerror="this.style.opacity=.12" loading="lazy" onclick="window.open('${esc(thumb.replace(/=s\d+$/, '=s1200'))}','_blank')" />`
-    : `<div class="card-img-ph">sem thumbnail</div>`;
+function card(it,res){
+  const thumb=it.thumbnail_link?it.thumbnail_link.replace(/=s\d+$/,'=s500'):'';
+  const img=thumb
+    ?`<img class="ci" src="${e(thumb)}" onerror="this.style.opacity=.1" loading="lazy" onclick="window.open('${e(thumb.replace(/=s\d+$/,'=s1200'))}','_blank')"/>`
+    :`<div class="ci-ph">sem thumbnail</div>`;
 
-  // AI description
-  const desc = it.produto_identificado;
-  const descHtml = desc
-    ? `<div class="ai-desc">${esc(desc)}</div>`
-    : `<div class="ai-desc none">Sem descrição — configure ANTHROPIC_API_KEY ou use Editar</div>`;
+  // Description banner
+  const descH=it.produto_identificado
+    ?`<div class="desc-banner">${e(it.produto_identificado)}</div>`
+    :`<div class="desc-none">Sem análise — configure ANTHROPIC_API_KEY ou use ✎ Editar</div>`;
+
+  // Briefing fields
+  const f=(label,val,cls='')=>{
+    const empty=val==null||val==='';
+    return `<div class="bfi ${cls}"><div class="bfi-l">${label}</div><div class="bfi-v${empty?' null':''}">${empty?'—':e(String(val))}</div></div>`;
+  };
+  const preco=it.preco_valor!=null?`R$ ${Number(it.preco_valor).toFixed(0)}`:null;
+  const precoRef=it.preco_fonte||null;
+  const bfg=`<div class="bfg">
+    ${f('Categoria',it.categoria)}
+    ${f('Santo / Devoção',it.santo_devocao)}
+    ${f('Material',it.material)}
+    ${f('Cor',it.cor)}
+    ${f('Altura estimada',it.altura_valor!=null?`${it.altura_valor} cm`:null)}
+    ${f('Preço sugerido',preco,'price')}
+    ${precoRef?`<div class="bfi full"><div class="bfi-l">Referência de preço</div><div class="bfi-v" style="font-size:11px;color:var(--muted)">${e(precoRef)}</div></div>`:''}
+  </div>`;
+
+  // Shopify suggestion
+  let shopSug='';
+  if(it.titulo_recomendado||it.descricao_recomendada){
+    shopSug=`<div class="shopify-sug">
+      <div class="shopify-sug-l">Sugestão Shopify</div>
+      ${it.titulo_recomendado?`<div class="shopify-sug-title">${e(it.titulo_recomendado)}</div>`:''}
+      ${it.descricao_recomendada?`<div class="shopify-sug-desc">${e(it.descricao_recomendada)}</div>`:''}
+    </div>`;
+  }
 
   // Candidates
-  let candidates = [];
-  try { candidates = JSON.parse(it.ai_result_json || '[]'); } catch {}
-  if (!Array.isArray(candidates)) candidates = [];
+  let cands=[];try{cands=JSON.parse(it.ai_result_json||'[]');}catch{}
+  if(!Array.isArray(cands))cands=[];
+  const sel=SELS[it.id]||ESELS[it.id];
+  const linked=it.shopify_product_id;
 
-  const sel = selections[it.id] || editSelections[it.id];
-  const linkedId = it.shopify_product_id;
-
-  let candsHtml = '';
-  if (resolved && linkedId) {
-    candsHtml = `<div class="linked-box"><div class="linked-lbl">Produto vinculado</div>${esc(it.produto_identificado || linkedId)}</div>`;
+  let candsH='';
+  if(res&&linked){
+    candsH=`<div class="linked"><div class="linked-l">Produto vinculado</div>${e(it.produto_identificado||linked)}</div>`;
   } else {
-    const btns = candidates.map(c => {
-      const isSel = sel && sel.product_id === c.product_id;
-      return `<button class="cand-btn ${isSel ? 'selected' : ''}"
-        onclick="selectCand(${it.id},'${escQ(c.product_id)}','${escQ(c.title)}')"
-        title="${esc(c.product_id)}">
-        <span>${esc(c.title)}</span>
-        <span class="cand-score">${c.score > 0 ? Math.round(c.score * 100) + '%' : '—'}</span>
+    const btns=cands.map(c=>{
+      const isSel=sel&&sel.product_id===c.product_id;
+      return `<button class="cbtn${isSel?' sel':''}" onclick="selCand(${it.id},'${eq(c.product_id)}','${eq(c.title)}')" title="${e(c.product_id)}">
+        <span>${e(c.title)}</span>
+        <span class="cscore">${c.score>0?Math.round(c.score*100)+'%':'—'}</span>
       </button>`;
     }).join('');
-    candsHtml = `<div>
-      <div class="cands-label">Candidatos Shopify</div>
-      <div class="cands-list">
-        ${btns || '<div class="no-cands">Nenhum candidato por similaridade</div>'}
-      </div>
+    candsH=`<div>
+      <div class="cl">Match Shopify</div>
+      <div class="clist">${btns||'<div class="cnone">Nenhum candidato automático</div>'}</div>
     </div>`;
   }
 
   // Edit panel
-  const showEdit = !resolved && editOpen[it.id];
-  const editHtml = showEdit ? `<div class="edit-panel" id="editpanel-${it.id}">
-    <div class="edit-panel-title">🔍 Buscar produto Shopify</div>
-    <input class="edit-search" id="editsearch-${it.id}" placeholder="Digite nome do produto..." oninput="searchProducts(${it.id},this.value)" />
-    <div class="edit-results" id="editresults-${it.id}"><div class="edit-searching">Digite para buscar…</div></div>
-  </div>` : '';
+  const showEd=!res&&EOPEN[it.id];
+  const edH=showEd?`<div class="ep" id="ep-${it.id}">
+    <div class="ep-l">🔍 Buscar produto Shopify</div>
+    <input class="es-inp" id="esi-${it.id}" placeholder="Nome do produto..." oninput="srch(${it.id},this.value)"/>
+    <div class="er-list" id="erl-${it.id}"><div class="er-hint">Digite para buscar…</div></div>
+  </div>`:'';
 
   // Error
-  const errHtml = it.ai_error ? `<div class="err-msg">${esc(it.ai_error)}</div>` : '';
+  const errH=it.ai_error?`<div class="err-msg">${e(it.ai_error)}</div>`:'';
 
   // Actions
-  let actHtml = '';
-  if (!resolved) {
-    const canApprove = !!(sel || linkedId);
-    const approveLabel = sel ? '✓ Vincular e Aprovar' : (linkedId ? '✓ Aprovar' : '✓ Aprovar');
-    actHtml = `<div class="card-actions">
-      <button class="act-approve" ${canApprove ? '' : 'disabled'} onclick="aprovar(${it.id})">${approveLabel}</button>
-      <button class="act-edit" onclick="toggleEdit(${it.id})" title="Buscar produto manualmente">✎</button>
-      <button class="act-skip" onclick="acao(${it.id},'PULAR')">Pular</button>
-      <button class="act-nova" onclick="acao(${it.id},'SOLICITAR_NOVA_FOTO')" title="Solicitar nova foto">📷</button>
-      <button class="act-reject" onclick="acao(${it.id},'REPROVAR')">✗</button>
+  let actH='';
+  if(!res){
+    const canAp=!!(sel||linked);
+    const apLbl=sel?'✓ Vincular e Aprovar':'✓ Aprovar';
+    actH=`<div class="acts">
+      <button class="aa" ${canAp?'':'disabled'} onclick="aprovar(${it.id})">${apLbl}</button>
+      <button class="ae" onclick="togEd(${it.id})" title="Buscar produto manualmente">✎</button>
+      <button class="ask" onclick="acao(${it.id},'PULAR')">Pular</button>
+      <button class="anf" onclick="acao(${it.id},'SOLICITAR_NOVA_FOTO')" title="Nova foto">📷</button>
+      <button class="arj" onclick="acao(${it.id},'REPROVAR')" title="Reprovar">✗</button>
     </div>`;
   } else {
-    const labels = {APROVADO:'✓ Aprovado',REPROVADO:'✗ Reprovado',PRECISA_DE_NOVA_FOTO:'↻ Nova foto',PRECISA_DE_AJUSTE:'✎ Ajuste'};
-    actHtml = `<div class="resolved-lbl">${labels[it.status] || it.status}</div>`;
+    const L={APROVADO:'✓ Aprovado',REPROVADO:'✗ Reprovado',PRECISA_DE_NOVA_FOTO:'↻ Nova foto',PRECISA_DE_AJUSTE:'✎ Ajuste'};
+    actH=`<div class="res-l">${L[it.status]||it.status}</div>`;
   }
 
-  return `<div class="card ${resolved ? 'resolved' : ''}" id="card-${it.id}">
-    ${imgHtml}
-    <div class="card-body">
-      <div class="card-meta">
-        <span class="card-fn" title="${esc(it.file_name)}">${esc(it.file_name)}</span>
-        <span class="cbadge st-${it.status}">${it.status.replace(/_/g,' ')}</span>
-      </div>
-      ${descHtml}
-      ${errHtml}
-      ${candsHtml}
-      ${editHtml}
-      ${actHtml}
+  return `<div class="card${res?' res':''}" id="card-${it.id}">
+    ${img}
+    <div class="cb">
+      <div class="cm"><span class="fn" title="${e(it.file_name)}">${e(it.file_name)}</span>
+        <span class="badge st-${it.status}">${it.status.replace(/_/g,' ')}</span></div>
+      ${descH}
+      ${bfg}
+      ${shopSug}
+      ${errH}
+      ${candsH}
+      ${edH}
+      ${actH}
     </div>
   </div>`;
 }
 
-// ── Edit panel ────────────────────────────────────────────────────────────────
-function attachEditListeners() {
-  // Inputs já têm oninput inline — nada extra necessário aqui
+// ── Edit ──────────────────────────────────────────────────────────────────────
+function togEd(id){EOPEN[id]=!EOPEN[id];refreshCard(id);}
+
+const ST={};
+function srch(id,q){
+  clearTimeout(ST[id]);
+  const rl=document.getElementById('erl-'+id);
+  if(!rl)return;
+  if(!q.trim()){rl.innerHTML='<div class="er-hint">Digite para buscar…</div>';return;}
+  rl.innerHTML='<div class="er-hint">Buscando…</div>';
+  ST[id]=setTimeout(async()=>{
+    try{
+      const r=await api('search-products?q='+encodeURIComponent(q.trim()));
+      const ps=r.products||[];
+      if(!ps.length){rl.innerHTML='<div class="er-hint">Nenhum resultado.</div>';return;}
+      const cur=ESELS[id];
+      rl.innerHTML=ps.map(p=>`<button class="er-btn${cur&&cur.product_id===p.product_id?' sel':''}"
+        onclick="selEd(${id},'${eq(p.product_id)}','${eq(p.title)}')">
+        ${e(p.title)}<span style="color:var(--muted);font-size:10px;margin-left:5px">${e(p.product_type||'')}</span>
+      </button>`).join('');
+    }catch(err){rl.innerHTML='<div class="er-hint">Erro: '+e(err.message)+'</div>';}
+  },350);
 }
 
-function toggleEdit(itemId) {
-  editOpen[itemId] = !editOpen[itemId];
-  // Re-render só este card
-  refreshOneCard(itemId);
-}
-
-let searchTimers = {};
-async function searchProducts(itemId, q) {
-  clearTimeout(searchTimers[itemId]);
-  const resultsEl = document.getElementById('editresults-' + itemId);
-  if (!resultsEl) return;
-  if (!q.trim()) { resultsEl.innerHTML = '<div class="edit-searching">Digite para buscar…</div>'; return; }
-  resultsEl.innerHTML = '<div class="edit-searching">Buscando…</div>';
-  searchTimers[itemId] = setTimeout(async () => {
-    try {
-      const r = await api('search-products?q=' + encodeURIComponent(q.trim()));
-      const prods = r.products || [];
-      if (!prods.length) { resultsEl.innerHTML = '<div class="edit-searching">Nenhum resultado.</div>'; return; }
-      const curSel = editSelections[itemId];
-      resultsEl.innerHTML = prods.map(p => {
-        const isSel = curSel && curSel.product_id === p.product_id;
-        return `<button class="edit-result-btn ${isSel ? 'selected' : ''}"
-          onclick="selectFromEdit(${itemId},'${escQ(p.product_id)}','${escQ(p.title)}')">
-          ${esc(p.title)}<span class="edit-result-type">${esc(p.product_type || '')}</span>
-        </button>`;
-      }).join('');
-    } catch(e) { resultsEl.innerHTML = '<div class="edit-searching">Erro: ' + esc(e.message) + '</div>'; }
-  }, 350);
-}
-
-function selectFromEdit(itemId, productId, title) {
-  editSelections[itemId] = { product_id: productId, title };
-  selections[itemId] = { product_id: productId, title }; // sync para o botão Aprovar
-  // Atualiza o painel de edição sem re-renderizar o card inteiro
-  const resultsEl = document.getElementById('editresults-' + itemId);
-  if (resultsEl) {
-    resultsEl.querySelectorAll('.edit-result-btn').forEach(btn => {
-      btn.classList.toggle('selected', btn.textContent.trim().startsWith(title.slice(0, 10)));
-    });
-  }
-  // Atualiza botão aprovar
-  const approveBtn = document.querySelector(`#card-${itemId} .act-approve`);
-  if (approveBtn) {
-    approveBtn.disabled = false;
-    approveBtn.textContent = '✓ Vincular e Aprovar';
-  }
-  log(`Selecionado: "${title}"`, 'ok');
+function selEd(id,pid,title){
+  ESELS[id]={product_id:pid,title};
+  SELS[id]={product_id:pid,title};
+  const ab=document.querySelector(`#card-${id} .aa`);
+  if(ab){ab.disabled=false;ab.textContent='✓ Vincular e Aprovar';}
+  log(`Selecionado: "${title}"`,'ok');
+  // Atualiza visual dos botões de resultado
+  const rl=document.getElementById('erl-'+id);
+  if(rl)rl.querySelectorAll('.er-btn').forEach(b=>b.classList.toggle('sel',b.textContent.trim().startsWith(title.slice(0,8))));
 }
 
 // ── Candidate selection ───────────────────────────────────────────────────────
-function selectCand(itemId, productId, title) {
-  const prev = selections[itemId];
-  if (prev && prev.product_id === productId) {
-    delete selections[itemId];
-    delete editSelections[itemId];
-  } else {
-    selections[itemId] = { product_id: productId, title };
-    editSelections[itemId] = { product_id: productId, title };
-  }
-  refreshOneCard(itemId);
+function selCand(id,pid,title){
+  const prev=SELS[id];
+  if(prev&&prev.product_id===pid){delete SELS[id];delete ESELS[id];}
+  else{SELS[id]={product_id:pid,title};ESELS[id]={product_id:pid,title};}
+  refreshCard(id);
 }
 
-async function refreshOneCard(itemId) {
-  if (!currentBatchId) return;
-  const r = await api('batch-status?batch_id=' + currentBatchId);
-  if (r.error) return;
-  const item = r.items.find(i => i.id === itemId);
-  if (!item) return;
-  const card = document.getElementById('card-' + itemId);
-  if (!card) return;
-  const resolved = ['APROVADO','REPROVADO','PRECISA_DE_AJUSTE','PRECISA_DE_NOVA_FOTO'].includes(item.status);
-  const newCard = document.createElement('div');
-  newCard.innerHTML = cardHtml(item, resolved);
-  card.replaceWith(newCard.firstElementChild);
-  // Re-focus search if edit was open
-  if (editOpen[itemId]) {
-    const inp = document.getElementById('editsearch-' + itemId);
-    if (inp) inp.focus();
-  }
+async function refreshCard(id){
+  if(!batchId)return;
+  const r=await api('batch-status?batch_id='+batchId);
+  if(r.error)return;
+  const it=r.items.find(i=>i.id===id);
+  if(!it)return;
+  const el=document.getElementById('card-'+id);
+  if(!el)return;
+  const res=['APROVADO','REPROVADO','PRECISA_DE_AJUSTE','PRECISA_DE_NOVA_FOTO'].includes(it.status);
+  const tmp=document.createElement('div');
+  tmp.innerHTML=card(it,res);
+  el.replaceWith(tmp.firstElementChild);
+  if(EOPEN[id]){const inp=document.getElementById('esi-'+id);if(inp)inp.focus();}
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────────
-async function aprovar(itemId) {
-  const sel = selections[itemId];
-  const body = { item_id: itemId, action: 'APROVAR' };
-  if (sel) {
-    body.fields = {
-      shopify_product_id: sel.product_id,
-      produto_identificado: sel.title,
-      confianca_correspondencia: 1.0,
-      status_correspondencia: 'VINCULADO_MANUALMENTE',
-    };
-  }
-  await executarAcao(itemId, body);
-  delete selections[itemId];
-  delete editSelections[itemId];
-  delete editOpen[itemId];
+async function aprovar(id){
+  const sel=SELS[id];
+  const body={item_id:id,action:'APROVAR'};
+  if(sel)body.fields={shopify_product_id:sel.product_id,produto_identificado:sel.title,confianca_correspondencia:1.0,status_correspondencia:'VINCULADO_MANUALMENTE'};
+  await exec(id,body);
+  delete SELS[id];delete ESELS[id];delete EOPEN[id];
 }
-
-async function acao(itemId, action) {
-  await executarAcao(itemId, { item_id: itemId, action });
-}
-
-async function executarAcao(itemId, body) {
-  try {
-    const r = await api('review-action', { method: 'POST', body: JSON.stringify(body) });
-    if (r.error === 'aprovacao_bloqueada') { log('Bloqueado: ' + r.reason, 'err'); alert('Não pode aprovar: ' + r.reason); return; }
-    if (r.error) { log('Erro: ' + r.error, 'err'); return; }
-    log(`Item ${itemId}: ${r.status}`, r.status === 'APROVADO' ? 'ok' : '');
-    await renderBatch();
-  } catch(e) { log('Erro: ' + e.message, 'err'); }
+async function acao(id,action){await exec(id,{item_id:id,action});}
+async function exec(id,body){
+  try{
+    const r=await api('review-action',{method:'POST',body:JSON.stringify(body)});
+    if(r.error==='aprovacao_bloqueada'){log('Bloqueado: '+r.reason,'er');alert('Não pode aprovar: '+r.reason);return;}
+    if(r.error){log('Erro: '+r.error,'er');return;}
+    log(`Item ${id}: ${r.status}`,r.status==='APROVADO'?'ok':'');
+    await render();
+  }catch(err){log('Erro: '+err.message,'er');}
 }
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
-function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function escQ(s) { return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"'); }
+function e(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function eq(s){return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"');}
 </script>
 </body>
 </html>

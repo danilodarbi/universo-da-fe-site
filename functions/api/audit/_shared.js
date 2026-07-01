@@ -162,15 +162,37 @@ export async function fetchThumbnailAsBase64(env, thumbnailLink) {
 export async function analyzePhotoWithAnthropic(env, { imageBase64 }) {
   if (!env.ANTHROPIC_API_KEY) return null;
 
-  const prompt = `Você está analisando uma foto de produto de uma loja católica brasileira chamada "Universo da Fé".
-Descreva em 1 frase CURTA e OBJETIVA o que é este produto:
-- Tipo exato: imagem/estátua, terço, escapulário, quadro/gravura, chaveiro, pulseira, dezena, kit, etc
-- Santo ou devoção representado(a) — seja específico (ex: "São Bento", "Nossa Senhora Aparecida", "Divino Espírito Santo")
-- Material se visível (resina, madeira, metal, tecido, acrílico...)
-- Tamanho estimado se der para inferir pelo contexto
-Formato: "[Tipo] de [Santo/Devoção] em [material], [tamanho se visível]."
-Exemplos: "Imagem de São Bento em resina, aproximadamente 30cm." / "Terço de Nossa Senhora com contas azuis e crucifixo dourado." / "Escapulário de Nossa Senhora do Carmo com cordão marrom."
-Seja direto e objetivo. Sem "Esta foto mostra...", sem introduções.`;
+  const prompt = `Você é um especialista em artigos religiosos católicos brasileiros. Analise esta foto de produto para catalogação na loja "Universo da Fé".
+
+Retorne SOMENTE um JSON válido, sem texto fora do JSON, neste formato exato:
+{
+  "descricao": "frase curta e objetiva descrevendo o produto",
+  "categoria": "IMAGEM_DEVOCIONAL|TERCO|ESCAPULARIO|QUADRO|CHAVEIRO|PULSEIRA|DEZENA|KIT_DEVOCIONAL|OUTRO",
+  "santo": "nome exato do santo ou devoção representada, ou null",
+  "material": "resina|madeira|metal|tecido|acrílico|papel|misto|null",
+  "altura_cm": número estimado em cm ou null,
+  "cor": "descrição da cor principal e acabamento",
+  "preco_sugerido_brl": número inteiro ou null,
+  "preco_referencia": "justificativa do preço (ex: imagem resina 20cm mercado brasileiro ~R$50-70)",
+  "titulo_shopify": "título no padrão: [Tipo] [Santo/Devoção] – [Detalhe | Tamanho | Material]",
+  "descricao_shopify": "2-3 frases devocionais, tom respeitoso, max 320 chars",
+  "confianca": 0.0,
+  "necessita_revisao": true
+}
+
+REGRAS OBRIGATÓRIAS:
+- altura_cm: estime comparando com objetos visíveis (mãos, prateleira, embalagem). Se impossível, null.
+- preco_sugerido_brl: use referências do mercado brasileiro:
+  Imagem resina 10-15cm → R$30-50 | 20cm → R$50-80 | 30cm → R$80-130 | 40cm+ → R$130-250
+  Terço simples → R$20-35 | Terço madeira/pedra → R$35-70
+  Escapulário simples → R$15-25 | Escapulário bordado/metálico → R$25-60
+  Quadro/gravura → R$40-90 | Chaveiro → R$12-25 | Pulseira → R$15-35 | Dezena → R$10-20
+- titulo_shopify: ex: "Imagem de São Bento – 20 cm | Resina" ou "Terço de Nossa Senhora Aparecida – Contas Azuis | Madeira"
+- descricao_shopify: sem emojis, sem exclamações, sem clichês de venda
+- confianca: 0.9 se tem certeza total, 0.7 se provavelmente, 0.4 se incerto
+- necessita_revisao: false só se confianca >= 0.8 E todos os campos principais preenchidos
+- NUNCA invente atributos não visíveis. Use null se não souber.
+- Responda APENAS o JSON, sem markdown, sem explicações.`;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -181,7 +203,7 @@ Seja direto e objetivo. Sem "Esta foto mostra...", sem introduções.`;
     },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 200,
+      max_tokens: 600,
       messages: [{
         role: 'user',
         content: [
@@ -194,7 +216,13 @@ Seja direto e objetivo. Sem "Esta foto mostra...", sem introduções.`;
 
   const data = await res.json();
   if (!res.ok) throw new Error(`Anthropic: ${data.error?.message || res.status}`);
-  return data.content?.[0]?.text?.trim() || null;
+  const raw = data.content?.[0]?.text?.trim() || '{}';
+  try {
+    return JSON.parse(raw.replace(/^```json\s*|\s*```$/g, '').trim());
+  } catch {
+    // fallback: retorna só a descrição se JSON quebrar
+    return { descricao: raw.slice(0, 300), confianca: 0.3, necessita_revisao: true };
+  }
 }
 
 // ---- OpenAI ----

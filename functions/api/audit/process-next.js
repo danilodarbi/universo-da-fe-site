@@ -1,19 +1,13 @@
 // functions/api/audit/process-next.js
 // POST /api/audit/process-next  { batch_id }
 //
-// Processa UM item pendente do lote por chamada.
-// Se ANTHROPIC_API_KEY estiver configurado: analisa a foto com Claude Haiku
-// e gera descrição do produto. A descrição também é usada para re-buscar
-// candidatos Shopify por similaridade textual (muito melhor que nome de arquivo).
-// Sem a key: prepara para revisão manual com candidatos por nome de arquivo.
+// Processa UM item por chamada. Com ANTHROPIC_API_KEY: retorna briefing
+// completo (categoria, santo, material, altura, preço, título e descrição
+// Shopify). Sem a key: prepara para revisão manual.
 
 import {
-  jsonResponse,
-  corsPreflight,
-  requireAuth,
-  topCandidates,
-  fetchThumbnailAsBase64,
-  analyzePhotoWithAnthropic,
+  jsonResponse, corsPreflight, requireAuth,
+  topCandidates, fetchThumbnailAsBase64, analyzePhotoWithAnthropic,
 } from './_shared.js';
 
 export async function onRequest(context) {
@@ -48,48 +42,78 @@ export async function onRequest(context) {
 
   try {
     if (!item.thumbnail_link) {
-      throw new Error('Sem thumbnail do Drive — rode sync-drive primeiro ou verifique o arquivo');
+      throw new Error('Sem thumbnail — rode sync-drive primeiro');
     }
 
     const imageBase64 = await fetchThumbnailAsBase64(env, item.thumbnail_link);
 
-    // Análise de visão com Claude Haiku (se key disponível)
-    let descricao = null;
+    // Análise completa com Claude Haiku
+    let ai = null;
     let aiUsed = false;
     if (env.ANTHROPIC_API_KEY) {
       try {
-        descricao = await analyzePhotoWithAnthropic(env, { imageBase64 });
+        ai = await analyzePhotoWithAnthropic(env, { imageBase64 });
         aiUsed = true;
       } catch (aiErr) {
-        // não bloqueia o fluxo — só anota o erro
-        descricao = null;
+        // Não bloqueia o fluxo
+        ai = null;
       }
     }
 
-    // Busca candidatos: usa descrição AI (muito mais precisa) ou nome do arquivo
+    // Busca candidatos Shopify usando a descrição AI (muito mais precisa que nome de arquivo)
     const candidatesRows = await env.DB.prepare(
       `SELECT product_id, title, product_type FROM shopify_products_cache`
     ).all();
-    const queryText = descricao || item.file_name;
+    const queryText = ai?.descricao || ai?.santo || item.file_name;
     const candidates = topCandidates(queryText, candidatesRows.results || [], 3);
-
     const candidatesJson = JSON.stringify(
-      candidates.map(c => ({
-        product_id: c.product_id,
-        title: c.title,
-        score: Math.round((c.score || 0) * 100) / 100,
-      }))
+      candidates.map(c => ({ product_id: c.product_id, title: c.title, score: Math.round((c.score||0)*100)/100 }))
     );
 
+    // Determina necessidade de revisão
+    const necessita = ai
+      ? (ai.necessita_revisao !== false || (ai.confianca || 0) < 0.8)
+      : true;
+
+    // Salva todos os campos do briefing no banco
     await env.DB.prepare(
       `UPDATE audit_records SET
         status = 'PRONTO_PARA_REVISAO',
         produto_identificado = ?,
-        ai_result_json = ?,
-        necessita_revisao = 1,
-        updated_at = datetime('now')
+        categoria           = ?,
+        santo_devocao       = ?,
+        material            = ?,
+        cor                 = ?,
+        altura_valor        = ?,
+        altura_fonte        = ?,
+        altura_confianca    = ?,
+        preco_valor         = ?,
+        preco_fonte         = ?,
+        titulo_recomendado  = ?,
+        descricao_recomendada = ?,
+        confianca_correspondencia = ?,
+        ai_result_json      = ?,
+        necessita_revisao   = ?,
+        updated_at          = datetime('now')
        WHERE id = ?`
-    ).bind(descricao || null, candidatesJson, item.id).run();
+    ).bind(
+      ai?.descricao         || null,
+      ai?.categoria         || null,
+      ai?.santo             || null,
+      ai?.material          || null,
+      ai?.cor               || null,
+      ai?.altura_cm         ?? null,
+      ai?.altura_cm != null ? 'AUDITORIA' : null,
+      ai?.confianca         ?? null,
+      ai?.preco_sugerido_brl ?? null,
+      ai?.preco_referencia  || null,
+      ai?.titulo_shopify    || null,
+      ai?.descricao_shopify || null,
+      ai?.confianca         ?? null,
+      candidatesJson,
+      necessita ? 1 : 0,
+      item.id
+    ).run();
 
     await env.DB.prepare(
       `UPDATE batches SET processed_items = processed_items + 1, updated_at = datetime('now') WHERE id = ?`
@@ -99,10 +123,11 @@ export async function onRequest(context) {
       done: false,
       item_id: item.id,
       status: 'PRONTO_PARA_REVISAO',
-      descricao,
+      descricao: ai?.descricao || null,
       ai_used: aiUsed,
       candidates: candidates.length,
     });
+
   } catch (e) {
     await env.DB.prepare(
       `UPDATE audit_records SET status = 'ERRO', ai_error = ?, updated_at = datetime('now') WHERE id = ?`
