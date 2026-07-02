@@ -300,26 +300,30 @@ function card(it,res){
     :`<div class="ci-ph">sem thumbnail</div>`;
 
   // Description banner
+  const hasAI = !!(it.produto_identificado||it.categoria||it.santo_devocao);
   const descH=it.produto_identificado
     ?`<div class="desc-banner">${e(it.produto_identificado)}</div>`
-    :`<div class="desc-none">Sem análise — configure ANTHROPIC_API_KEY ou use ✎ Editar</div>`;
+    :`<div class="desc-none">
+        <span style="opacity:.5">🔍</span>
+        ${it.ai_error?'Erro na análise — use ✎ para corrigir manualmente':'Sem análise de IA — adicione ANTHROPIC_API_KEY ou use ✎ Editar'}
+      </div>`;
 
-  // Briefing fields
+  // Briefing fields — só mostra se pelo menos um campo foi preenchido pela IA
   const f=(label,val,cls='')=>{
     const empty=val==null||val==='';
     return `<div class="bfi ${cls}"><div class="bfi-l">${label}</div><div class="bfi-v${empty?' null':''}">${empty?'—':e(String(val))}</div></div>`;
   };
   const preco=it.preco_valor!=null?`R$ ${Number(it.preco_valor).toFixed(0)}`:null;
   const precoRef=it.preco_fonte||null;
-  const bfg=`<div class="bfg">
+  const bfg=hasAI?`<div class="bfg">
     ${f('Categoria',it.categoria)}
     ${f('Santo / Devoção',it.santo_devocao)}
     ${f('Material',it.material)}
     ${f('Cor',it.cor)}
     ${f('Altura estimada',it.altura_valor!=null?`${it.altura_valor} cm`:null)}
     ${f('Preço sugerido',preco,'price')}
-    ${precoRef?`<div class="bfi full"><div class="bfi-l">Referência de preço</div><div class="bfi-v" style="font-size:11px;color:var(--muted)">${e(precoRef)}</div></div>`:''}
-  </div>`;
+    ${precoRef?`<div class="bfi full"><div class="bfi-l">Ref. de preço</div><div class="bfi-v" style="font-size:11px;color:var(--muted)">${e(precoRef)}</div></div>`:''}
+  </div>`:'';
 
   // Shopify suggestion
   let shopSug='';

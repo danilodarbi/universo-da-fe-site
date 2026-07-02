@@ -59,10 +59,19 @@ export function topCandidates(queryText, products, limit = 3) {
 // ---- Google Drive: autenticação via Service Account (JWT Bearer, RS256) ----
 
 function base64url(bytes) {
-  let str = typeof bytes === 'string'
-    ? btoa(unescape(encodeURIComponent(bytes)))
-    : btoa(String.fromCharCode(...new Uint8Array(bytes)));
-  return str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  if (typeof bytes === 'string') {
+    return btoa(unescape(encodeURIComponent(bytes)))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  // Conversão em chunks para evitar "Maximum call stack size exceeded"
+  // em imagens grandes (spread de Uint8Array enorme estoura o call stack)
+  const uint8 = new Uint8Array(bytes);
+  let binary = '';
+  const CHUNK = 8192;
+  for (let i = 0; i < uint8.length; i += CHUNK) {
+    binary += String.fromCharCode(...uint8.slice(i, i + CHUNK));
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 function pemToArrayBuffer(pem) {
@@ -148,7 +157,7 @@ export async function driveListFolder(env, folderId, pageToken) {
 // thumbnailLink vem em baixa resolução por padrão; trocamos =sXXX por algo maior.
 export async function fetchThumbnailAsBase64(env, thumbnailLink) {
   const token = await getDriveAccessToken(env);
-  const url = thumbnailLink.replace(/=s\d+$/, '=s800');
+  const url = thumbnailLink.replace(/=s\d+$/, '=s400');
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error(`Falha ao baixar thumbnail: ${res.status}`);
   const buf = await res.arrayBuffer();
