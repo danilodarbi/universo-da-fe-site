@@ -1,7 +1,8 @@
 // functions/api/config/status.js
 // GET /api/config/status
-// Verifica as integrações ativas (Shopify, Google Drive, D1).
-// Nunca expõe valores de secrets, private_key, tokens ou conteúdo do JSON.
+// Verifica presença e formato das integrações. Rápido — sem chamadas externas.
+// POST /api/config/status  { test: "shopify"|"google"|"anthropic" }
+// Testa uma integração específica com chamada real (pode demorar).
 
 import { getDriveAccessToken, driveListFolder } from '../audit/_shared.js';
 
@@ -16,44 +17,72 @@ export async function onRequest(context) {
   const { request, env } = context;
 
   if (request.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Password',
-      },
-    });
+    return new Response(null, { headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Password',
+    }});
   }
 
   const pwd = request.headers.get('X-Admin-Password');
   if (pwd !== env.ADMIN_PASSWORD) return json({ error: 'unauthorized' }, 401);
 
-  // Executa todos os checks em paralelo com timeout individual de 8s
-  const withTimeout = (promise, label) =>
-    Promise.race([
-      promise,
-      new Promise(resolve => setTimeout(() => resolve(fail(`${label}: timeout após 8s`)), 8000)),
-    ]);
+  // POST → testa integração específica com chamada real
+  if (request.method === 'POST') {
+    const body = await request.json().catch(() => ({}));
+    switch (body.test) {
+      case 'shopify':   return json({ result: await testShopify(env) });
+      case 'google':    return json({ result: await testGoogle(env) });
+      case 'anthropic': return json({ result: await testAnthropic(env) });
+      default: return json({ error: 'test inválido' }, 400);
+    }
+  }
 
-  const [shopify, google_drive, d1, anthropic] = await Promise.all([
-    withTimeout(checkShopify(env), 'Shopify'),
-    withTimeout(checkGoogleDrive(env), 'Google Drive'),
-    Promise.resolve(checkD1(env)),
-    withTimeout(checkAnthropic(env), 'Anthropic'),
-  ]);
-
-  return json({ shopify, google_drive, d1, anthropic });
+  // GET → verificação instantânea de presença/formato (sem rede)
+  return json({
+    shopify:    quickCheckShopify(env),
+    google_drive: quickCheckGoogle(env),
+    d1:         quickCheckD1(env),
+    anthropic:  quickCheckAnthropic(env),
+  });
 }
 
-// ── Shopify ──────────────────────────────────────────────────────────────────
+// ── Quick checks (instantâneo, sem rede) ──────────────────────────────────────
 
-async function checkShopify(env) {
+function quickCheckShopify(env) {
   const shop = env.SHOPIFY_SHOP_DOMAIN || env.SHOPIFY_STORE;
-
-  if (!shop)          return fail('SHOPIFY_SHOP_DOMAIN não configurado');
-  if (!env.SHOPIFY_CLIENT_ID)     return fail('SHOPIFY_CLIENT_ID não configurado');
+  if (!shop)                  return fail('SHOPIFY_SHOP_DOMAIN não configurado');
+  if (!env.SHOPIFY_CLIENT_ID) return fail('SHOPIFY_CLIENT_ID não configurado');
   if (!env.SHOPIFY_CLIENT_SECRET) return fail('SHOPIFY_CLIENT_SECRET não configurado');
+  return ok(`Variáveis presentes — loja: ${shop}`, { shop, quick: true });
+}
 
+function quickCheckGoogle(env) {
+  if (!env.GOOGLE_SERVICE_ACCOUNT_JSON) return fail('GOOGLE_SERVICE_ACCOUNT_JSON não configurado');
+  let sa;
+  try { sa = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON); } catch { return fail('JSON inválido'); }
+  if (!sa.client_email || !sa.private_key) return fail('JSON sem client_email ou private_key');
+  return ok(`Service account: ${sa.client_email}`, { service_account: sa.client_email, quick: true });
+}
+
+function quickCheckD1(env) {
+  if (!env.DB) return fail('Binding D1 "DB" não encontrado');
+  return ok('Binding DB disponível');
+}
+
+function quickCheckAnthropic(env) {
+  if (!env.ANTHROPIC_API_KEY) return fail('ANTHROPIC_API_KEY não configurada');
+  const key = env.ANTHROPIC_API_KEY;
+  if (!key.startsWith('sk-ant-')) return fail('Formato inválido (deve começar com sk-ant-)');
+  return ok(`Key configurada (${key.slice(0, 12)}…) — clique Testar para validar`, { quick: true });
+}
+
+// ── Full tests (com chamada real, via POST) ────────────────────────────────────
+
+async function testShopify(env) {
+  const shop = env.SHOPIFY_SHOP_DOMAIN || env.SHOPIFY_STORE;
+  if (!shop || !env.SHOPIFY_CLIENT_ID || !env.SHOPIFY_CLIENT_SECRET)
+    return fail('Variáveis não configuradas');
   try {
     const params = new URLSearchParams({
       grant_type: 'client_credentials',
@@ -66,119 +95,49 @@ async function checkShopify(env) {
       body: params.toString(),
     });
     const data = await res.json();
-    if (!res.ok || !data.access_token) {
-      return fail(`OAuth falhou (${res.status})`);
-    }
-    return ok(`Conectado — loja: ${shop}`, {
-      shop,
-      scopes: data.scope || null,
-    });
-  } catch (e) {
-    return fail(`Erro de rede: ${sanitize(e.message)}`);
-  }
+    if (!res.ok || !data.access_token) return fail(`OAuth falhou (${res.status})`);
+    return ok(`Conectado — loja: ${shop}`, { shop, scopes: data.scope || null });
+  } catch (e) { return fail(`Erro: ${sanitize(e.message)}`); }
 }
-
-// ── Google Drive ─────────────────────────────────────────────────────────────
 
 const PASTA_1 = '1fzzaoZF-hGXdDtcp2DDWtnLUWKIFSLxI';
 const PASTA_2 = '1xJGzqUFk67eSohxRKvMkhPv3VGG6B6xt';
 
-async function checkGoogleDrive(env) {
-  if (!env.GOOGLE_SERVICE_ACCOUNT_JSON) {
-    return fail('GOOGLE_SERVICE_ACCOUNT_JSON não configurado');
-  }
-
-  // Valida o JSON antes de tentar autenticar
+async function testGoogle(env) {
+  if (!env.GOOGLE_SERVICE_ACCOUNT_JSON) return fail('Não configurado');
   let sa;
+  try { sa = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON); } catch { return fail('JSON inválido'); }
   try {
-    sa = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON);
-  } catch {
-    return fail('GOOGLE_SERVICE_ACCOUNT_JSON é JSON inválido');
-  }
-
-  if (!sa.client_email || !sa.private_key) {
-    return fail('JSON da service account sem client_email ou private_key');
-  }
-
-  // Testa autenticação e acesso às duas pastas
-  try {
-    await getDriveAccessToken(env); // lança se a auth falhar
-
+    await getDriveAccessToken(env);
     const folders = [];
     for (const [nome, id] of [['Pasta 1 (resina)', PASTA_1], ['Pasta 2 (joias)', PASTA_2]]) {
       try {
         const page = await driveListFolder(env, id);
-        const total = page.files?.length ?? 0;
-        folders.push({ nome, id, acessivel: true, arquivos_na_pagina: total });
+        folders.push({ nome, id, acessivel: true, arquivos: page.files?.length ?? 0 });
       } catch (e) {
         folders.push({ nome, id, acessivel: false, erro: sanitize(e.message) });
       }
     }
-
-    const todas_ok = folders.every(f => f.acessivel);
-    return {
-      ok: todas_ok,
-      msg: todas_ok
-        ? `Service account autenticada — ${sa.client_email.split('@')[0]}@…`
-        : 'Autenticada, mas uma ou mais pastas não acessíveis',
-      service_account: sa.client_email, // e-mail não é secret
-      pastas: folders,
-    };
-  } catch (e) {
-    return fail(`Autenticação falhou: ${sanitize(e.message)}`);
-  }
+    const ok_ = folders.every(f => f.acessivel);
+    return { ok: ok_, msg: ok_ ? `Autenticada — ${sa.client_email.split('@')[0]}@…` : 'Auth OK mas pasta(s) inacessível(is)', service_account: sa.client_email, pastas: folders };
+  } catch (e) { return fail(`Auth falhou: ${sanitize(e.message)}`); }
 }
 
-// ── Anthropic ─────────────────────────────────────────────────────────────────
-
-async function checkAnthropic(env) {
-  if (!env.ANTHROPIC_API_KEY) return fail('ANTHROPIC_API_KEY não configurada');
+async function testAnthropic(env) {
+  if (!env.ANTHROPIC_API_KEY) return fail('Não configurada');
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 10,
-        messages: [{ role: 'user', content: 'ping' }],
-      }),
+      headers: { 'Content-Type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 5, messages: [{ role: 'user', content: 'oi' }] }),
     });
     const data = await res.json();
     if (!res.ok) return fail(`Key inválida: ${sanitize(data.error?.message || res.status)}`);
-    return ok('Conectada — claude-sonnet-4-6 pronto para análise de fotos');
-  } catch (e) {
-    return fail(`Erro de rede: ${sanitize(e.message)}`);
-  }
-}
-
-// ── D1 ───────────────────────────────────────────────────────────────────────
-
-function checkD1(env) {
-  if (!env.DB) return fail('Binding D1 "DB" não encontrado');
-  // Só a presença do binding já confirma que está configurado no Pages.
-  // Uma query real seria feita aqui se precisássemos de garantia extra,
-  // mas o binding ausente já causaria erro em qualquer endpoint de audit.
-  return ok('Binding DB disponível');
+    return ok('Key válida — claude-sonnet-4-6 pronto');
+  } catch (e) { return fail(`Erro: ${sanitize(e.message)}`); }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function ok(msg, extra = {}) {
-  return { ok: true, msg, ...extra };
-}
-
-function fail(msg) {
-  return { ok: false, msg };
-}
-
-// Remove trechos que possam vazar tokens ou chaves de mensagens de erro
-function sanitize(msg = '') {
-  return msg
-    .replace(/Bearer\s+\S+/gi, 'Bearer [REDACTED]')
-    .replace(/private_key[^,}]*/gi, 'private_key: [REDACTED]')
-    .slice(0, 300);
-}
+function ok(msg, extra = {}) { return { ok: true, msg, ...extra }; }
+function fail(msg)            { return { ok: false, msg }; }
+function sanitize(msg = '')   { return String(msg).replace(/Bearer\s+\S+/gi, 'Bearer [REDACTED]').slice(0, 200); }

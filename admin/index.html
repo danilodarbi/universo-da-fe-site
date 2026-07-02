@@ -1549,82 +1549,73 @@ document.getElementById('createSubmit').onclick = async () => {
 // ═══════════════════════════════════════════════════
 async function renderConfig() {
   const div = document.getElementById('configStatus');
-  div.innerHTML = '<div class="loading"><div class="spinner"></div><p>Verificando integrações…</p></div>';
-
+  div.innerHTML = '<div class="loading"><div class="spinner"></div><p>Verificando…</p></div>';
   let result;
   try {
-    const r = await fetch('/api/config/status', {
-      headers: { 'X-Admin-Password': STATE.password }
-    });
+    const r = await fetch('/api/config/status', { headers: { 'X-Admin-Password': STATE.password } });
     result = await r.json();
   } catch (e) {
-    div.innerHTML = `<div style="color:var(--danger);padding:16px">Erro ao verificar: ${escapeHtml(e.message)}</div>`;
+    div.innerHTML = `<div style="color:var(--danger);padding:16px">Erro: ${escapeHtml(e.message)}</div>`;
     return;
   }
-
-  // Monta linhas de status
-  const rows = [];
-
-  // Shopify
-  const sh = result.shopify || {};
-  rows.push({
-    group: 'Shopify Admin API',
-    items: [
-      { label: 'Autenticação OAuth', ok: sh.ok, msg: sh.msg || '' },
-      { label: 'Loja', ok: sh.ok, msg: sh.shop || '—', dim: true },
-      { label: 'Escopos', ok: sh.ok, msg: sh.scopes || '—', dim: true },
-    ]
-  });
-
-  // Google Drive
-  const gd = result.google_drive || {};
-  const driveItems = [
-    { label: 'Service Account', ok: gd.ok, msg: gd.msg || '' },
+  function badge(ok) {
+    return `<div style="background:${ok?'var(--success)':'var(--danger)'};color:#fff;padding:3px 10px;border-radius:100px;font-size:10px;font-weight:700;white-space:nowrap">${ok?'● OK':'● FALHA'}</div>`;
+  }
+  function testBtn(t) {
+    return `<button onclick="testInteg('${t}')" id="testbtn-${t}" style="padding:3px 10px;font-size:10px;font-weight:600;border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:100px;cursor:pointer">Testar</button>`;
+  }
+  const rows = [
+    { key:'shopify',       label:'Shopify Admin API',          t:'shopify',   extra: result.shopify?.shop },
+    { key:'google_drive',  label:'Google Drive',               t:'google',    extra: result.google_drive?.service_account },
+    { key:'anthropic',     label:'Anthropic (Análise de IA)',  t:'anthropic', extra: null },
+    { key:'d1',            label:'Banco de Dados (D1)',        t:null,        extra: null },
   ];
-  if (gd.service_account) {
-    driveItems.push({ label: 'Conta', ok: true, msg: gd.service_account, dim: true });
-  }
-  if (gd.pastas) {
-    for (const p of gd.pastas) {
-      driveItems.push({
-        label: p.nome,
-        ok: p.acessivel,
-        msg: p.acessivel ? `${p.arquivos_na_pagina} arquivo(s) visíveis` : (p.erro || 'sem acesso'),
-        dim: p.acessivel,
-      });
-    }
-  }
-  rows.push({ group: 'Google Drive', items: driveItems });
-
-  // Anthropic
-  const an = result.anthropic || {};
-  rows.push({
-    group: 'Anthropic (Análise de Fotos)',
-    items: [{ label: 'ANTHROPIC_API_KEY', ok: an.ok, msg: an.msg || '' }]
-  });
-  rows.push({
-    group: 'Banco de Dados (D1)',
-    items: [{ label: 'Binding DB', ok: d1.ok, msg: d1.msg || '' }]
-  });
-
-  const borderStyle = 'border-bottom:1px solid var(--border)';
-  div.innerHTML = rows.map(({ group, items }) => `
-    <div style="${borderStyle};padding-bottom:18px;margin-bottom:18px">
-      <div style="font-family:var(--serif);font-size:1.05rem;font-weight:600;color:var(--navy);margin-bottom:10px;letter-spacing:0.01em">${group}</div>
-      ${items.map(item => `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 8px 12px;${item.dim ? '' : ''}">
-          <div>
-            <span style="font-size:13px;color:${item.dim ? 'var(--muted)' : 'var(--navy)'};font-weight:${item.dim ? 400 : 500}">${escapeHtml(item.label)}</span>
-            ${item.msg ? `<span style="font-size:12px;color:var(--muted);margin-left:8px">${escapeHtml(item.msg)}</span>` : ''}
-          </div>
-          <div style="background:${item.ok ? 'var(--success)' : 'var(--danger)'};color:#fff;padding:3px 10px;border-radius:100px;font-size:10px;font-weight:700;letter-spacing:0.05em;white-space:nowrap;margin-left:12px">
-            ${item.ok ? '● OK' : '● FALHA'}
-          </div>
+  div.innerHTML = rows.map(({ key, label, t, extra }) => {
+    const s = result[key] || {};
+    return `<div style="border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:14px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div>
+          <div style="font-family:var(--serif);font-size:1rem;font-weight:600;color:var(--navy)">${label}</div>
+          ${extra ? `<div style="font-size:11px;color:var(--muted);margin-top:1px">${escapeHtml(extra)}</div>` : ''}
+          <div style="font-size:12px;color:var(--muted);margin-top:3px" id="msg-${key}">${escapeHtml(s.msg||'')}</div>
+          <div style="font-size:11px;margin-top:4px" id="detail-${key}"></div>
         </div>
-      `).join('')}
-    </div>
-  `).join('');
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;padding-top:2px">
+          ${t ? testBtn(t) : ''}
+          <div id="badge-${key}">${badge(s.ok)}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
+
+async function testInteg(integration) {
+  const keyMap = { shopify:'shopify', google:'google_drive', anthropic:'anthropic' };
+  const key = keyMap[integration];
+  const btn = document.getElementById('testbtn-' + integration);
+  if (btn) { btn.textContent = '…'; btn.disabled = true; }
+  try {
+    const r = await fetch('/api/config/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Password': STATE.password },
+      body: JSON.stringify({ test: integration }),
+    });
+    const { result: s } = await r.json();
+    const b = document.getElementById('badge-' + key);
+    const m = document.getElementById('msg-' + key);
+    const d = document.getElementById('detail-' + key);
+    if (b) b.innerHTML = `<div style="background:${s.ok?'var(--success)':'var(--danger)'};color:#fff;padding:3px 10px;border-radius:100px;font-size:10px;font-weight:700;white-space:nowrap">${s.ok?'● OK':'● FALHA'}</div>`;
+    if (m) m.textContent = s.msg || '';
+    if (d && s.pastas) d.innerHTML = s.pastas.map(p => `<span style="margin-right:8px;color:${p.acessivel?'var(--success)':'var(--danger)'}">${p.acessivel?'✓':'✗'} ${p.nome}${p.acessivel?' ('+p.arquivos+' arq.)':': '+p.erro}</span>`).join('');
+    if (d && s.scopes) d.textContent = 'Escopos: ' + s.scopes;
+  } catch(e) {
+    const m = document.getElementById('msg-' + key);
+    if (m) m.textContent = 'Erro: ' + e.message;
+  } finally {
+    if (btn) { btn.textContent = 'Testar'; btn.disabled = false; }
+  }
+}
+
 
 // ═══════════════════════════════════════════════════
 // HELPERS
