@@ -1596,8 +1596,12 @@ async function renderConfig() {
   }
   rows.push({ group: 'Google Drive', items: driveItems });
 
-  // D1
-  const d1 = result.d1 || {};
+  // Anthropic
+  const an = result.anthropic || {};
+  rows.push({
+    group: 'Anthropic (Análise de Fotos)',
+    items: [{ label: 'ANTHROPIC_API_KEY', ok: an.ok, msg: an.msg || '' }]
+  });
   rows.push({
     group: 'Banco de Dados (D1)',
     items: [{ label: 'Binding DB', ok: d1.ok, msg: d1.msg || '' }]

@@ -32,6 +32,7 @@ export async function onRequest(context) {
     shopify: await checkShopify(env),
     google_drive: await checkGoogleDrive(env),
     d1: checkD1(env),
+    anthropic: await checkAnthropic(env),
   };
 
   return json(result);
@@ -118,6 +119,32 @@ async function checkGoogleDrive(env) {
     };
   } catch (e) {
     return fail(`Autenticação falhou: ${sanitize(e.message)}`);
+  }
+}
+
+// ── Anthropic ─────────────────────────────────────────────────────────────────
+
+async function checkAnthropic(env) {
+  if (!env.ANTHROPIC_API_KEY) return fail('ANTHROPIC_API_KEY não configurada');
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 10,
+        messages: [{ role: 'user', content: 'ping' }],
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) return fail(`Key inválida: ${sanitize(data.error?.message || res.status)}`);
+    return ok('Conectada — claude-sonnet-4-6 pronto para análise de fotos');
+  } catch (e) {
+    return fail(`Erro de rede: ${sanitize(e.message)}`);
   }
 }
 

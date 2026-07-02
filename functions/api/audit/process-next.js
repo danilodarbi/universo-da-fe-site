@@ -48,13 +48,14 @@ export async function onRequest(context) {
     // Análise completa com Claude Sonnet (se key disponível)
     let ai = null;
     let aiUsed = false;
+    let aiError = null;
     if (env.ANTHROPIC_API_KEY) {
       try {
         ai = await analyzePhotoWithAnthropic(env, { imageBase64 });
         aiUsed = true;
       } catch (aiErr) {
         ai = null;
-        // Anota o erro de IA mas não bloqueia
+        aiError = aiErr.message; // Guarda erro real para o log
       }
     }
 
@@ -130,6 +131,7 @@ export async function onRequest(context) {
       confianca: ai?.confianca ?? null,
       alertas: ai?.alertas || [],
       ai_used: aiUsed,
+      ai_error: aiError,
       candidates: candidates.length,
     });
 

@@ -624,9 +624,9 @@ async function processarProximos10(){
       const r=await api('process-next',{method:'POST',body:JSON.stringify({batch_id:batchId})});
       if(r.error&&r.error!=='sem_registros_pendentes'){log('Erro item: '+r.error,'er');break;}
       if(r.done){log('Lote pronto.','ok');break;}
-      const desc=r.descricao?` — "${r.descricao.slice(0,50)}${r.descricao.length>50?'…':''}"`:' (sem IA)';
+      const desc=r.descricao?` — "${r.descricao.slice(0,50)}${r.descricao.length>50?'…':''}"`:r.ai_error?` ⚠ IA: ${r.ai_error.slice(0,60)}`:'  (sem IA — key não detectada)';
       const conf=r.confianca!=null?` [${Math.round(r.confianca*100)}%]`:'';
-      log(`Foto ${r.item_id}${desc}${conf}`);
+      log(`Foto ${r.item_id}${desc}${conf}`,r.ai_error?'er':'');
     }
     setTab('revisao');
     await atualizarContagens();
