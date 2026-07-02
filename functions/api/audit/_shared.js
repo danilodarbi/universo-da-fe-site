@@ -307,11 +307,15 @@ REGRAS FINAIS:
 
   const data = await res.json();
   if (!res.ok) throw new Error(`Anthropic: ${data.error?.message || res.status}`);
-  const raw = (data.content?.[0]?.text || '{}').trim().replace(/^```json\s*|\s*```$/g, '').trim();
+  // Extrai JSON da resposta mesmo se vier com blocos de código markdown
+  const text = data.content?.[0]?.text || '{}';
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  const raw = (start >= 0 && end > start) ? text.slice(start, end + 1) : '{}';
   try {
     return JSON.parse(raw);
   } catch {
-    return { descricao: raw.slice(0, 300), confianca: 0.2, necessita_revisao: true, alertas: ['Resposta da IA não era JSON válido — revisar manualmente'] };
+    return { descricao: text.slice(0, 300), confianca: 0.2, necessita_revisao: true, alertas: ['Resposta da IA não era JSON válido — revisar manualmente'] };
   }
 }
 
