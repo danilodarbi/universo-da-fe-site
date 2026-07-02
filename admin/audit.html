@@ -153,6 +153,10 @@ main{padding:20px 24px;max-width:1400px;margin:0 auto}
 .res-l{text-align:center;padding:4px;font-size:11px;font-weight:600;letter-spacing:.05em;color:var(--muted)}
 .err-msg{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--err-fg);padding:7px;background:var(--err);border-radius:5px;word-break:break-all}
 
+.alertas-box{padding:8px 11px;background:#1a1400;border:1px solid var(--warn);border-radius:7px}
+.alertas-lbl{font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--warn-fg);margin-bottom:4px}
+.alerta-item{font-size:11px;color:#e0b84a;line-height:1.5;padding:2px 0 2px 6px;border-top:1px solid #2a2000}
+.alerta-item:first-of-type{border-top:none;padding-top:0}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 </style>
@@ -327,9 +331,21 @@ function card(it,res){
     </div>`;
   }
 
-  // Candidates
-  let cands=[];try{cands=JSON.parse(it.ai_result_json||'[]');}catch{}
+  // Candidates + alertas (nova estrutura: ai_result_json = {ai:{...}, candidates:[...]})
+  let cands=[];
+  let alertas=[];
+  try{
+    const raw=JSON.parse(it.ai_result_json||'{}');
+    // suporta novo formato {ai,candidates} e formato antigo [] por compatibilidade
+    if(Array.isArray(raw)){cands=raw;}
+    else{cands=raw.candidates||[];alertas=raw.ai?.alertas||[];}
+  }catch{}
   if(!Array.isArray(cands))cands=[];
+  const alertasH=alertas.length?`<div class="alertas-box">
+    <div class="alertas-lbl">⚠ Atenção da IA</div>
+    ${alertas.map(a=>`<div class="alerta-item">${e(a)}</div>`).join('')}
+  </div>`:'';
+
   const sel=SELS[it.id]||ESELS[it.id];
   const linked=it.shopify_product_id;
 
@@ -356,6 +372,10 @@ function card(it,res){
 
     <div class="ep-sec-title">✏ Corrigir análise</div>
     <div class="ep-fields">
+      <div class="ep-field" style="grid-column:1/-1">
+        <label class="ep-lbl">Descrição / Identificação</label>
+        <input class="es-inp" id="ef-desc-${it.id}" value="${e(it.produto_identificado||'')}" placeholder="ex: Imagem de São Bento em resina, 20cm"/>
+      </div>
       <div class="ep-field">
         <label class="ep-lbl">Santo / Devoção</label>
         <input class="es-inp" id="ef-santo-${it.id}" value="${e(it.santo_devocao||'')}" placeholder="ex: São Bento"/>
@@ -415,6 +435,7 @@ function card(it,res){
       <div class="cm"><span class="fn" title="${e(it.file_name)}">${e(it.file_name)}</span>
         <span class="badge st-${it.status}">${it.status.replace(/_/g,' ')}</span></div>
       ${descH}
+      ${alertasH}
       ${bfg}
       ${shopSug}
       ${errH}
@@ -451,6 +472,7 @@ function srch(id,q){
 
 async function salvarCorrecao(id){
   const g=s=>{ const el=document.getElementById(s); return el?el.value.trim():null; };
+  const desc    = g(`ef-desc-${id}`)  || null;
   const santo   = g(`ef-santo-${id}`) || null;
   const cat     = g(`ef-cat-${id}`)   || null;
   const mat     = g(`ef-mat-${id}`)   || null;
@@ -459,16 +481,17 @@ async function salvarCorrecao(id){
   const alt     = altRaw   && altRaw   !== '' ? Number(altRaw)   : null;
   const preco   = precoRaw && precoRaw !== '' ? Number(precoRaw) : null;
   const fields={};
-  if(santo  !==null)fields.santo_devocao=santo;
-  if(cat    !==null)fields.categoria=cat;
-  if(mat    !==null)fields.material=mat;
-  if(alt    !==null)fields.altura_valor=alt;
-  if(preco  !==null)fields.preco_valor=preco;
+  if(desc  !==null)fields.produto_identificado=desc;
+  if(santo !==null)fields.santo_devocao=santo;
+  if(cat   !==null)fields.categoria=cat;
+  if(mat   !==null)fields.material=mat;
+  if(alt   !==null)fields.altura_valor=alt;
+  if(preco !==null)fields.preco_valor=preco;
   if(Object.keys(fields).length===0){log('Nenhum campo alterado.','er');return;}
   try{
     const r=await api('review-action',{method:'POST',body:JSON.stringify({item_id:id,action:'CORRIGIR',fields})});
     if(r.error){log('Erro: '+r.error,'er');return;}
-    log(`Item ${id}: correção salva — continua na fila de revisão.`,'ok');
+    log(`Item ${id}: correção salva.`,'ok');
     EOPEN[id]=false;
     await render();
   }catch(err){log('Erro: '+err.message,'er');}

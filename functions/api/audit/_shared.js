@@ -162,37 +162,64 @@ export async function fetchThumbnailAsBase64(env, thumbnailLink) {
 export async function analyzePhotoWithAnthropic(env, { imageBase64 }) {
   if (!env.ANTHROPIC_API_KEY) return null;
 
-  const prompt = `Você é um especialista em artigos religiosos católicos brasileiros. Analise esta foto de produto para catalogação na loja "Universo da Fé".
+  const prompt = `Você é um catalogador especialista em artigos religiosos católicos brasileiros com 20 anos de experiência. Analisa fotos para a loja "Universo da Fé".
 
-Retorne SOMENTE um JSON válido, sem texto fora do JSON, neste formato exato:
+EXECUTE ESTE RACIOCÍNIO antes de responder:
+1. Tipo de produto: é uma imagem/estátua, terço, escapulário, quadro, chaveiro, pulseira, dezena (10 contas) ou kit?
+2. Santo ou devoção — use a iconografia:
+   - São Bento: hábito beneditino PRETO, cálice com serpente, corvo, medalha redonda
+   - São Francisco de Assis: hábito MARROM, animais ao redor, estigmas, pomba
+   - Nossa Senhora Aparecida: figura PEQUENA e NEGRA (cerâmica), coroa dourada, manto azul/dourado
+   - Nossa Senhora das Graças: braços abertos para baixo, raios de luz nas mãos
+   - Nossa Senhora de Fátima: manto branco com borda dourada, expressão suave
+   - Nossa Senhora do Carmo: manto marrom/ouro, escapulário na mão
+   - Sagrado Coração de Jesus: coração exposto no peito com chamas e coroa de espinhos
+   - Divino Espírito Santo: pomba branca com asas abertas e halo
+   - Santo Antônio: hábito franciscano MARROM, Menino Jesus nos braços, livro
+   - Padre Pio: hábito capuchinho, barba, luvas (mittens) nas mãos
+   - São Jorge: ARMADURA, cavalo branco, lança ou espada, dragão
+   - Santa Rita: espinho na testa, rosas, hábito agostiniano escuro
+   - Jesus Misericordioso: figura de Jesus com raios vermelho e branco do coração
+   - São Miguel: armadura, asas, lança apontada para demônio embaixo
+   - SE INCERTO: anote "Não identificado com certeza" e descreva os atributos visíveis
+3. Material: resina=plástico duro pintado; madeira=textura fibrosa/veios; metal=superfície brilhante/refletiva; tecido=terços/escapulários/pulseiras
+4. Tamanho: use APENAS referências visíveis na foto (mãos ≈ 18cm, palma ≈ 10cm, caixa de fósforo ≈ 5cm). Se não houver referência, coloque NULL.
+5. Condição da foto: borrada, escura, ângulo obscuro, produto em embalagem, múltiplos produtos?
+
+RETORNE SOMENTE JSON válido, sem texto fora do JSON, sem markdown, sem comentários:
 {
-  "descricao": "frase curta e objetiva descrevendo o produto",
+  "descricao": "1-2 frases: tipo + santo + material + tamanho. Ex: Imagem de Nossa Senhora Aparecida em resina, aproximadamente 20 cm, acabamento dourado e azul.",
   "categoria": "IMAGEM_DEVOCIONAL|TERCO|ESCAPULARIO|QUADRO|CHAVEIRO|PULSEIRA|DEZENA|KIT_DEVOCIONAL|OUTRO",
-  "santo": "nome exato do santo ou devoção representada, ou null",
+  "santo": "nome completo exato, ou 'Não identificado' se incerto",
   "material": "resina|madeira|metal|tecido|acrílico|papel|misto|null",
-  "altura_cm": número estimado em cm ou null,
-  "cor": "descrição da cor principal e acabamento",
+  "altura_cm": número inteiro ou null,
+  "cor": "cores dominantes e tipo de acabamento. Ex: branco com detalhes dourados, base azul",
   "preco_sugerido_brl": número inteiro ou null,
-  "preco_referencia": "justificativa do preço (ex: imagem resina 20cm mercado brasileiro ~R$50-70)",
-  "titulo_shopify": "título no padrão: [Tipo] [Santo/Devoção] – [Detalhe | Tamanho | Material]",
-  "descricao_shopify": "2-3 frases devocionais, tom respeitoso, max 320 chars",
+  "preco_referencia": "justificativa com a tabela usada. Ex: imagem resina 20cm, mercado ES 2025 ≈ R$55-85, sugerindo R$65",
+  "titulo_shopify": "máx 60 chars: [Santo] – [Tipo] [Material/Tamanho]. Ex: Nossa Senhora Aparecida – Imagem Resina 20 cm",
+  "descricao_shopify": "2-3 frases devocionais, tom respeitoso, sem emojis, sem exclamações, max 320 chars",
   "confianca": 0.0,
-  "necessita_revisao": true
+  "necessita_revisao": true,
+  "alertas": []
 }
 
-REGRAS OBRIGATÓRIAS:
-- altura_cm: estime comparando com objetos visíveis (mãos, prateleira, embalagem). Se impossível, null.
-- preco_sugerido_brl: use referências do mercado brasileiro:
-  Imagem resina 10-15cm → R$30-50 | 20cm → R$50-80 | 30cm → R$80-130 | 40cm+ → R$130-250
-  Terço simples → R$20-35 | Terço madeira/pedra → R$35-70
-  Escapulário simples → R$15-25 | Escapulário bordado/metálico → R$25-60
-  Quadro/gravura → R$40-90 | Chaveiro → R$12-25 | Pulseira → R$15-35 | Dezena → R$10-20
-- titulo_shopify: ex: "Imagem de São Bento – 20 cm | Resina" ou "Terço de Nossa Senhora Aparecida – Contas Azuis | Madeira"
-- descricao_shopify: sem emojis, sem exclamações, sem clichês de venda
-- confianca: 0.9 se tem certeza total, 0.7 se provavelmente, 0.4 se incerto
-- necessita_revisao: false só se confianca >= 0.8 E todos os campos principais preenchidos
-- NUNCA invente atributos não visíveis. Use null se não souber.
-- Responda APENAS o JSON, sem markdown, sem explicações.`;
+TABELA DE PREÇOS referência (mercado ES/Brasil 2025):
+Imagem resina: 10cm→R$25-40 | 15cm→R$40-60 | 20cm→R$55-85 | 25cm→R$80-120 | 30cm→R$100-150 | 40cm→R$150-230 | 50cm+→R$220-400
+Imagem madeira: +35% sobre resina | Imagem metal: R$45-180 dependendo do tamanho
+Terço plástico/acrílico: R$18-28 | Terço madeira/pedra semipreciosa: R$35-70 | Terço metal: R$45-90
+Dezena (10 contas apenas): R$12-22 | Escapulário simples: R$15-28 | Escapulário bordado/metal: R$28-60
+Quadro pequeno (<A4): R$35-60 | Médio (A4): R$55-100 | Grande: R$90-200
+Chaveiro: R$12-25 | Pulseira devocional: R$18-40 | Kit devocional: R$45-100
+
+REGRAS DE CONFIANÇA (seja conservador):
+- 0.85-1.0: certeza total — santo identificado com clareza, material óbvio, tamanho com referência
+- 0.65-0.84: provável — santo identificado mas ângulo dificulta, tamanho estimado sem referência clara
+- 0.40-0.64: incerto — santo duvidoso, foto parcial, múltiplas possibilidades
+- 0.00-0.39: muito incerto — foto ruim, produto não identificável, embalagem tampando
+
+necessita_revisao=false SOMENTE SE: confianca >= 0.80 E santo != 'Não identificado' E categoria definida E preco_sugerido_brl definido.
+
+alertas: liste QUALQUER ponto de incerteza — ex: "Santo pode ser São Francisco ou Santo Antônio — verificar se há animais ou Menino Jesus", "Tamanho estimado sem referência visual clara", "Foto com iluminação baixa, cor pode diferir do real", "Possível kit com mais de um produto".`;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -202,8 +229,9 @@ REGRAS OBRIGATÓRIAS:
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 600,
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      temperature: 0,
       messages: [{
         role: 'user',
         content: [
@@ -216,12 +244,11 @@ REGRAS OBRIGATÓRIAS:
 
   const data = await res.json();
   if (!res.ok) throw new Error(`Anthropic: ${data.error?.message || res.status}`);
-  const raw = data.content?.[0]?.text?.trim() || '{}';
+  const raw = (data.content?.[0]?.text || '{}').trim().replace(/^```json\s*|\s*```$/g, '').trim();
   try {
-    return JSON.parse(raw.replace(/^```json\s*|\s*```$/g, '').trim());
+    return JSON.parse(raw);
   } catch {
-    // fallback: retorna só a descrição se JSON quebrar
-    return { descricao: raw.slice(0, 300), confianca: 0.3, necessita_revisao: true };
+    return { descricao: raw.slice(0, 300), confianca: 0.2, necessita_revisao: true, alertas: ['JSON da IA malformado — revisar manualmente'] };
   }
 }
 

@@ -1,9 +1,7 @@
 // functions/api/audit/process-next.js
-// POST /api/audit/process-next  { batch_id }
-//
-// Processa UM item por chamada. Com ANTHROPIC_API_KEY: retorna briefing
-// completo (categoria, santo, material, altura, preço, título e descrição
-// Shopify). Sem a key: prepara para revisão manual.
+// Processa UM item pendente por chamada.
+// Salva o resultado completo da IA em ai_result_json (rastreabilidade)
+// e os campos individuais nas colunas editáveis.
 
 import {
   jsonResponse, corsPreflight, requireAuth,
@@ -42,12 +40,12 @@ export async function onRequest(context) {
 
   try {
     if (!item.thumbnail_link) {
-      throw new Error('Sem thumbnail — rode sync-drive primeiro');
+      throw new Error('Arquivo sem thumbnail no Drive — pode ser HEIC não convertido ou arquivo corrompido');
     }
 
     const imageBase64 = await fetchThumbnailAsBase64(env, item.thumbnail_link);
 
-    // Análise completa com Claude Haiku
+    // Análise completa com Claude Sonnet (se key disponível)
     let ai = null;
     let aiUsed = false;
     if (env.ANTHROPIC_API_KEY) {
@@ -55,46 +53,51 @@ export async function onRequest(context) {
         ai = await analyzePhotoWithAnthropic(env, { imageBase64 });
         aiUsed = true;
       } catch (aiErr) {
-        // Não bloqueia o fluxo
         ai = null;
+        // Anota o erro de IA mas não bloqueia
       }
     }
 
-    // Busca candidatos Shopify usando a descrição AI (muito mais precisa que nome de arquivo)
+    // Busca candidatos Shopify: usa descrição+santo da IA (muito mais precisa que nome de arquivo)
     const candidatesRows = await env.DB.prepare(
       `SELECT product_id, title, product_type FROM shopify_products_cache`
     ).all();
-    const queryText = ai?.descricao || ai?.santo || item.file_name;
+    const queryText = [ai?.santo, ai?.descricao, item.file_name].filter(Boolean).join(' ');
     const candidates = topCandidates(queryText, candidatesRows.results || [], 3);
-    const candidatesJson = JSON.stringify(
-      candidates.map(c => ({ product_id: c.product_id, title: c.title, score: Math.round((c.score||0)*100)/100 }))
-    );
 
-    // Determina necessidade de revisão
     const necessita = ai
       ? (ai.necessita_revisao !== false || (ai.confianca || 0) < 0.8)
       : true;
 
-    // Salva todos os campos do briefing no banco
+    // ai_result_json: guarda resultado BRUTO completo + candidatos calculados
+    const aiResultJson = JSON.stringify({
+      ai: ai || null,
+      candidates: candidates.map(c => ({
+        product_id: c.product_id,
+        title: c.title,
+        score: Math.round((c.score || 0) * 100) / 100,
+      })),
+    });
+
     await env.DB.prepare(
       `UPDATE audit_records SET
-        status = 'PRONTO_PARA_REVISAO',
-        produto_identificado = ?,
-        categoria           = ?,
-        santo_devocao       = ?,
-        material            = ?,
-        cor                 = ?,
-        altura_valor        = ?,
-        altura_fonte        = ?,
-        altura_confianca    = ?,
-        preco_valor         = ?,
-        preco_fonte         = ?,
-        titulo_recomendado  = ?,
-        descricao_recomendada = ?,
+        status                  = 'PRONTO_PARA_REVISAO',
+        produto_identificado    = ?,
+        categoria               = ?,
+        santo_devocao           = ?,
+        material                = ?,
+        cor                     = ?,
+        altura_valor            = ?,
+        altura_fonte            = ?,
+        altura_confianca        = ?,
+        preco_valor             = ?,
+        preco_fonte             = ?,
+        titulo_recomendado      = ?,
+        descricao_recomendada   = ?,
         confianca_correspondencia = ?,
-        ai_result_json      = ?,
-        necessita_revisao   = ?,
-        updated_at          = datetime('now')
+        ai_result_json          = ?,
+        necessita_revisao       = ?,
+        updated_at              = datetime('now')
        WHERE id = ?`
     ).bind(
       ai?.descricao         || null,
@@ -110,7 +113,7 @@ export async function onRequest(context) {
       ai?.titulo_shopify    || null,
       ai?.descricao_shopify || null,
       ai?.confianca         ?? null,
-      candidatesJson,
+      aiResultJson,
       necessita ? 1 : 0,
       item.id
     ).run();
@@ -124,6 +127,8 @@ export async function onRequest(context) {
       item_id: item.id,
       status: 'PRONTO_PARA_REVISAO',
       descricao: ai?.descricao || null,
+      confianca: ai?.confianca ?? null,
+      alertas: ai?.alertas || [],
       ai_used: aiUsed,
       candidates: candidates.length,
     });
