@@ -221,6 +221,7 @@ main{padding:18px 20px;max-width:1400px;margin:0 auto}
     <button class="btn bd" onclick="syncShopify()">🔄 Shopify</button>
     <div class="sep"></div>
     <button class="btn bd" onclick="atualizarContagens()">↻ Atualizar</button>
+    <button class="btn bd" onclick="reprocessarLote()" id="btnRep" style="border-color:#f87171;color:#f87171" title="Reseta itens sem análise de volta para a fila">↩ Reprocessar lote</button>
   </div>
 
   <div class="tabs" id="tabBar">
@@ -339,7 +340,24 @@ async function renderRevisao(mc){
   document.getElementById('pb').style.width=(batch.total_items?Math.round(batch.processed_items/batch.total_items*100):0)+'%';
   const pend=items.filter(i=>['PRONTO_PARA_REVISAO','ERRO','ANALISANDO','PENDENTE'].includes(i.status));
   const res=items.filter(i=>['APROVADO','REPROVADO','PRECISA_DE_AJUSTE','PRECISA_DE_NOVA_FOTO'].includes(i.status));
-  let h='';
+
+  // Banner: todos sem análise = key não configurada
+  const semAnalise=pend.filter(i=>!i.produto_identificado&&!i.ai_error);
+  const bannerH=semAnalise.length===pend.length&&pend.length>0?`
+    <div style="background:#1a1400;border:1px solid var(--warn);border-radius:8px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:flex-start;gap:12px">
+      <span style="font-size:20px">⚠</span>
+      <div>
+        <div style="font-weight:600;color:var(--warn-fg);margin-bottom:4px">ANTHROPIC_API_KEY não configurada</div>
+        <div style="font-size:12px;color:#c9a850;line-height:1.6">
+          Estes ${semAnalise.length} itens foram processados sem análise de IA.<br>
+          1. Adicione <code style="background:#2a2000;padding:1px 5px;border-radius:3px">ANTHROPIC_API_KEY</code> no Cloudflare → Settings → Variables and secrets<br>
+          2. Clique <strong>↩ Reprocessar lote</strong> (reseta estes itens para a fila)<br>
+          3. Clique <strong>▶ Processar próximos 10</strong> novamente
+        </div>
+      </div>
+    </div>`:'';
+
+  let h=bannerH;
   if(pend.length)h+=`<div class="sh"><span class="st">Aguardando revisão</span><span class="ss">${pend.length} foto(s)</span></div><div class="grid">${pend.map(i=>card(i,false)).join('')}</div>`;
   if(res.length)h+=`<div class="sh"><span class="st">Resolvidos neste lote</span><span class="ss">${res.length} foto(s)</span></div><div class="grid">${res.map(i=>card(i,true)).join('')}</div>`;
   if(!h)h='<div class="es"><h2>Lote concluído</h2><p>Clique em <strong>▶ Processar próximos 10</strong> para continuar.</p></div>';
@@ -548,6 +566,18 @@ function card(it,res){
 }
 
 // ── Sync ──────────────────────────────────────────────────────────────────────
+async function reprocessarLote(){
+  if(!confirm('Isso vai resetar os itens sem análise de volta para a fila. Confirma?'))return;
+  log('Resetando itens sem análise...');
+  try{
+    const body=batchId?JSON.stringify({batch_id:batchId}):'{}';
+    const r=await api('reprocess-batch',{method:'POST',body});
+    if(r.error){log('Erro: '+r.error,'er');return;}
+    log(r.msg,r.reset>0?'ok':'');
+    if(r.reset>0){batchId=null;await atualizarContagens();setTab('revisao');}
+  }catch(err){log('Erro: '+err.message,'er');}
+}
+
 async function syncDrive(){
   log('Sincronizando Drive...');
   try{
