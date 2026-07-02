@@ -601,10 +601,12 @@ async function syncShopify(){
 async function carregarLote(){
   try{
     const r=await api('batch-status');
-    if(r.error)return;
-    batchId=r.batch.id;
-    if(activeTab==='revisao')await renderTab();
+    if(!r.error && r.batch){
+      batchId=r.batch.id;
+    }
   }catch{}
+  // Sempre renderiza — se não há lote, mostra estado vazio em vez de ficar em "Carregando"
+  if(activeTab==='revisao') await renderTab();
 }
 
 async function processarProximos10(){
