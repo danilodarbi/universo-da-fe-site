@@ -83,7 +83,7 @@ export async function onRequest(context) {
       break;
     }
     case 'CORRIGIR':
-      newStatus = 'PRECISA_DE_AJUSTE';
+      newStatus = 'PRONTO_PARA_REVISAO'; // salva correção, mantém na fila
       break;
     case 'REPROVAR':
       newStatus = 'REPROVADO';
