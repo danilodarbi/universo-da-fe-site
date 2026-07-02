@@ -28,14 +28,21 @@ export async function onRequest(context) {
   const pwd = request.headers.get('X-Admin-Password');
   if (pwd !== env.ADMIN_PASSWORD) return json({ error: 'unauthorized' }, 401);
 
-  const result = {
-    shopify: await checkShopify(env),
-    google_drive: await checkGoogleDrive(env),
-    d1: checkD1(env),
-    anthropic: await checkAnthropic(env),
-  };
+  // Executa todos os checks em paralelo com timeout individual de 8s
+  const withTimeout = (promise, label) =>
+    Promise.race([
+      promise,
+      new Promise(resolve => setTimeout(() => resolve(fail(`${label}: timeout após 8s`)), 8000)),
+    ]);
 
-  return json(result);
+  const [shopify, google_drive, d1, anthropic] = await Promise.all([
+    withTimeout(checkShopify(env), 'Shopify'),
+    withTimeout(checkGoogleDrive(env), 'Google Drive'),
+    Promise.resolve(checkD1(env)),
+    withTimeout(checkAnthropic(env), 'Anthropic'),
+  ]);
+
+  return json({ shopify, google_drive, d1, anthropic });
 }
 
 // ── Shopify ──────────────────────────────────────────────────────────────────
