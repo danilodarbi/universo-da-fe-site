@@ -390,7 +390,8 @@ async function renderStatus(status, mc){
     mc.innerHTML=`<div class="es"><h2>${STATUS_LABELS[status]||status}</h2><p>Nenhum item ainda.</p></div>`;return;
   }
   const isRes=['APROVADO','REPROVADO','PRECISA_DE_NOVA_FOTO','PRECISA_DE_AJUSTE'].includes(status);
-  mc.innerHTML=`<div class="sh"><span class="st">${STATUS_LABELS[status]||status}</span><span class="ss">${r.total} foto(s)</span></div>
+  const errBtn=status==='ERRO'?`<button class="btn bd" style="border-color:#f87171;color:#f87171;margin-left:10px" onclick="reprocessarErros()">↩ Reprocessar todos os erros</button>`:'';
+  mc.innerHTML=`<div class="sh"><span class="st">${STATUS_LABELS[status]||status}</span><span class="ss">${r.total} foto(s)</span>${errBtn}</div>
     <div class="grid">${r.items.map(i=>card(i,isRes)).join('')}</div>
     ${pagination(r.total,limit,offset,status)}`;
 }
@@ -412,9 +413,9 @@ function goPage(key,offset){
 
 // ── Card simples (só fila — sem ações) ───────────────────────────────────────
 function cardSimples(it){
-  const thumb=it.thumbnail_link?it.thumbnail_link.replace(/=s\d+$/,'=s400'):'';
-  const img=thumb?`<img class="ci" src="${e(thumb)}" onerror="this.style.opacity=.1" loading="lazy"/>`
-    :`<div class="ci-ph">sem thumbnail</div>`;
+  const thumbUrl=it.drive_file_id?`/api/audit/thumb?id=${it.drive_file_id}&s=512&pwd=${encodeURIComponent(PWD)}`:'';
+  const img=thumbUrl?`<img class="ci" src="${e(thumbUrl)}" onerror="this.parentElement.querySelector('.ci-ph-fallback')?.style.setProperty('display','flex');this.style.display='none'" loading="lazy"/><div class="ci-ph ci-ph-fallback" style="display:none">HEIC sem preview</div>`
+    :`<div class="ci-ph">sem imagem</div>`;
   return `<div class="card">
     ${img}
     <div class="cb">
@@ -426,10 +427,11 @@ function cardSimples(it){
 
 // ── Card completo ─────────────────────────────────────────────────────────────
 function card(it,res){
-  const thumb=it.thumbnail_link?it.thumbnail_link.replace(/=s\d+$/,'=s400'):'';
-  const img=thumb
-    ?`<img class="ci" src="${e(thumb)}" onerror="this.style.opacity=.1" loading="lazy" onclick="window.open('${e(thumb.replace(/=s\d+$/,'=s1200'))}','_blank')"/>`
-    :`<div class="ci-ph">sem thumbnail</div>`;
+  const thumbUrl=it.drive_file_id?`/api/audit/thumb?id=${it.drive_file_id}&s=512&pwd=${encodeURIComponent(PWD)}`:'';
+  const bigUrl=it.drive_file_id?`/api/audit/thumb?id=${it.drive_file_id}&s=1200&pwd=${encodeURIComponent(PWD)}`:'';
+  const img=thumbUrl
+    ?`<img class="ci" src="${e(thumbUrl)}" onerror="this.parentElement.querySelector('.ci-ph-fallback')?.style.setProperty('display','flex');this.style.display='none'" loading="lazy" onclick="window.open('${e(bigUrl)}','_blank')"/><div class="ci-ph ci-ph-fallback" style="display:none">HEIC sem preview</div>`
+    :`<div class="ci-ph">sem imagem</div>`;
 
   const hasAI=!!(it.produto_identificado||it.categoria||it.santo_devocao);
   const descH=it.produto_identificado
@@ -566,6 +568,18 @@ function card(it,res){
 }
 
 // ── Sync ──────────────────────────────────────────────────────────────────────
+async function reprocessarErros(){
+  if(!confirm('Resetar todos os itens com erro de volta para a fila?'))return;
+  log('Resetando erros...');
+  try{
+    const r=await api('reprocess-batch',{method:'POST',body:JSON.stringify({mode:'errors'})});
+    if(r.error){log('Erro: '+r.error,'er');return;}
+    log(r.msg,'ok');
+    await atualizarContagens();
+    setTab('ERRO');
+  }catch(err){log('Erro: '+err.message,'er');}
+}
+
 async function reprocessarLote(){
   if(!confirm('Isso vai resetar os itens sem análise de volta para a fila. Confirma?'))return;
   log('Resetando itens sem análise...');

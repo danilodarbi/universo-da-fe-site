@@ -153,16 +153,40 @@ export async function driveListFolder(env, folderId, pageToken) {
   return data; // { files: [...], nextPageToken? }
 }
 
-// Baixa o thumbnail JPEG que o próprio Google já gera (evita decodificar HEIC).
-// thumbnailLink vem em baixa resolução por padrão; trocamos =sXXX por algo maior.
-export async function fetchThumbnailAsBase64(env, thumbnailLink) {
-  const token = await getDriveAccessToken(env);
-  const url = thumbnailLink.replace(/=s\d+$/, '=s400');
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  if (!res.ok) throw new Error(`Falha ao baixar thumbnail: ${res.status}`);
-  const buf = await res.arrayBuffer();
+// Baixa a imagem do Drive como base64 JPEG para enviar à IA.
+// Estratégia robusta para HEIC e outros formatos:
+// 1. Tenta o thumbnailLink SEM header de auth (o link já vem assinado)
+// 2. Se falhar, usa o endpoint de thumbnail da API Drive com auth (converte p/ JPEG)
+export async function fetchThumbnailAsBase64(env, thumbnailLink, driveFileId) {
+  let buf = null;
+
+  // Tentativa 1: thumbnailLink direto (já vem com assinatura, NÃO usar Bearer)
+  if (thumbnailLink) {
+    try {
+      const url = thumbnailLink.replace(/=s\d+$/, '=s512');
+      const res = await fetch(url);
+      if (res.ok) buf = await res.arrayBuffer();
+    } catch { /* tenta próxima */ }
+  }
+
+  // Tentativa 2: endpoint da Drive API com token (gera JPEG mesmo de HEIC)
+  if (!buf && driveFileId) {
+    const token = await getDriveAccessToken(env);
+    const apiUrl = `https://www.googleapis.com/drive/v3/files/${driveFileId}?fields=thumbnailLink`;
+    const metaRes = await fetch(apiUrl, { headers: { Authorization: `Bearer ${token}` } });
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.thumbnailLink) {
+        const url = meta.thumbnailLink.replace(/=s\d+$/, '=s512');
+        const res = await fetch(url);
+        if (res.ok) buf = await res.arrayBuffer();
+      }
+    }
+  }
+
+  if (!buf) throw new Error('Não foi possível obter thumbnail (arquivo HEIC pode não ter preview gerado no Drive ainda)');
+
   const b64 = base64url(buf).replace(/-/g, '+').replace(/_/g, '/');
-  // Adiciona padding = necessário para Anthropic/OpenAI
   return b64 + '='.repeat((4 - b64.length % 4) % 4);
 }
 

@@ -43,7 +43,7 @@ export async function onRequest(context) {
       throw new Error('Arquivo sem thumbnail no Drive — pode ser HEIC não convertido ou arquivo corrompido');
     }
 
-    const imageBase64 = await fetchThumbnailAsBase64(env, item.thumbnail_link);
+    const imageBase64 = await fetchThumbnailAsBase64(env, item.thumbnail_link, item.drive_file_id);
 
     // Análise completa com Claude Sonnet (se key disponível)
     let ai = null;

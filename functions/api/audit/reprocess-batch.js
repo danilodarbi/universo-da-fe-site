@@ -14,6 +14,16 @@ export async function onRequest(context) {
 
   const body = await request.json().catch(() => ({}));
 
+  // Modo especial: resetar TODOS os itens com ERRO (qualquer lote) de volta para fila
+  if (body.mode === 'errors') {
+    const result = await env.DB.prepare(
+      `UPDATE audit_records
+       SET status = 'PENDENTE', batch_id = NULL, ai_result_json = NULL, ai_error = NULL, updated_at = datetime('now')
+       WHERE status = 'ERRO'`
+    ).run();
+    return jsonResponse({ ok: true, reset: result.meta?.changes ?? 0, msg: `${result.meta?.changes ?? 0} erro(s) resetados para a fila.` });
+  }
+
   // Usa batch_id fornecido ou pega o último lote EM_ANDAMENTO
   let batchId = body.batch_id;
   if (!batchId) {
@@ -24,7 +34,7 @@ export async function onRequest(context) {
     batchId = batch.id;
   }
 
-  // Reseta itens sem análise (produto_identificado NULL) de volta para PENDENTE
+  // Reseta itens sem análise (produto_identificado NULL) OU com erro, de volta para PENDENTE
   const result = await env.DB.prepare(
     `UPDATE audit_records
      SET status = 'PENDENTE',
