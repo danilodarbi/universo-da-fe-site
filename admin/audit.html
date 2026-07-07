@@ -247,7 +247,7 @@ main{padding:18px 20px;max-width:1400px;margin:0 auto}
 
 <script>
 let PWD='', batchId=null, busy=false, activeTab='revisao';
-const SELS={}, ESELS={}, EOPEN={};
+const SELS={}, ESELS={}, EOPEN={}, PENDING_FIELDS={};
 let tabOffset={};
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -510,16 +510,20 @@ function card(it,res){
 
   // Edit panel
   const showEd=!res&&EOPEN[it.id];
+  // Valores: prioriza escolha pendente do usuário sobre o palpite da IA
+  const pf=PENDING_FIELDS[it.id]||{};
+  const vDesc = pf.produto_identificado!=null?pf.produto_identificado:(it.produto_identificado||'');
+  const vSanto= pf.santo_devocao!=null?pf.santo_devocao:(it.santo_devocao||'');
   const edH=showEd?`<div class="ep" id="ep-${it.id}">
     <div class="ep-sec">✏ Corrigir análise</div>
     <div class="ep-fields">
       <div class="ep-field" style="grid-column:1/-1">
         <label class="ep-lbl">Descrição</label>
-        <input class="es-inp" id="ef-desc-${it.id}" value="${e(it.produto_identificado||'')}" placeholder="ex: Imagem de São Bento em resina, 20cm"/>
+        <input class="es-inp" id="ef-desc-${it.id}" value="${e(vDesc)}" placeholder="ex: Imagem de São Bento em resina, 20cm"/>
       </div>
       <div class="ep-field">
         <label class="ep-lbl">Santo</label>
-        <input class="es-inp" id="ef-santo-${it.id}" value="${e(it.santo_devocao||'')}" placeholder="ex: São Bento"/>
+        <input class="es-inp" id="ef-santo-${it.id}" value="${e(vSanto)}" placeholder="ex: São Bento"/>
       </div>
       <div class="ep-field">
         <label class="ep-lbl">Categoria</label>
@@ -542,7 +546,7 @@ function card(it,res){
     </div>
     <button class="ep-save" onclick="salvarCorrecao(${it.id})">💾 Salvar correção</button>
     <div class="ep-div"></div>
-    <div class="ep-sec">🔍 Vincular produto Shopify</div>
+    <div class="ep-sec">🔍 Vincular outro produto Shopify</div>
     <input class="es-inp" id="esi-${it.id}" placeholder="Buscar produto por nome..." oninput="srch(${it.id},this.value)"/>
     <div class="er-list" id="erl-${it.id}"><div class="er-hint">Digite para buscar…</div></div>
   </div>`:'';
@@ -683,9 +687,15 @@ async function srch(id,q){
 function selEd(id,pid,title){
   ESELS[id]={product_id:pid,title};
   SELS[id]={product_id:pid,title};
+  applyChoiceToFields(id,title);
+  // Atualiza os campos de descrição e santo na tela imediatamente
+  const dEl=document.getElementById('ef-desc-'+id);
+  const sEl=document.getElementById('ef-santo-'+id);
+  if(dEl)dEl.value=title;
+  if(sEl){const s=extrairSanto(title);if(s)sEl.value=s;}
   const ab=document.querySelector(`#card-${id} .aa`);
   if(ab){ab.disabled=false;ab.textContent='✓ Vincular e Aprovar';}
-  log(`Selecionado: "${title}"`,'ok');
+  log(`Selecionado: "${title}" — descrição e santo atualizados`,'ok');
   const rl=document.getElementById('erl-'+id);
   if(rl)rl.querySelectorAll('.er-btn').forEach(b=>b.classList.toggle('sel',b.textContent.trim().startsWith(title.slice(0,8))));
 }
@@ -713,15 +723,53 @@ async function salvarCorrecao(id){
     if(r.error){log('Erro: '+r.error,'er');return;}
     log(`Item ${id}: correção salva.`,'ok');
     EOPEN[id]=false;
+    delete PENDING_FIELDS[id];
     await refreshCard(id);
   }catch(err){log('Erro: '+err.message,'er');}
 }
 
 function selCand(id,pid,title){
   const prev=SELS[id];
-  if(prev&&prev.product_id===pid){delete SELS[id];delete ESELS[id];}
-  else{SELS[id]={product_id:pid,title};ESELS[id]={product_id:pid,title};}
+  if(prev&&prev.product_id===pid){
+    delete SELS[id];delete ESELS[id];
+    refreshCard(id);
+    return;
+  }
+  SELS[id]={product_id:pid,title};
+  ESELS[id]={product_id:pid,title};
+  // Ao escolher um candidato, abre a edição já preenchida com os dados do produto escolhido
+  // e sobrescreve a descrição/santo com base na escolha do usuário (não no palpite da IA)
+  EOPEN[id]=true;
+  applyChoiceToFields(id,title);
   refreshCard(id);
+}
+
+// Deduz santo a partir do título do produto e preenche os campos de correção
+function applyChoiceToFields(id,title){
+  const santo=extrairSanto(title);
+  PENDING_FIELDS[id]={
+    produto_identificado:title,
+    santo_devocao:santo||'',
+  };
+}
+
+// Lista de santos/devoções conhecidos para extrair do título do produto
+const SANTOS_CONHECIDOS=[
+  'Nossa Senhora Aparecida','Nossa Senhora de Fátima','Nossa Senhora das Graças','Nossa Senhora do Carmo',
+  'Nossa Senhora de Lourdes','Nossa Senhora Desatadora dos Nós','Nossa Senhora Rainha','Nossa Senhora da Penha',
+  'Nossa Senhora do Perpétuo Socorro','Imaculada Conceição','Imaculado Coração de Maria',
+  'Sagrado Coração de Jesus','Divino Espírito Santo','Menino Jesus de Praga','Jesus Misericordioso',
+  'São Bento','São Francisco de Assis','São Francisco','Santo Antônio','São José','São Jorge','São Judas Tadeu',
+  'São Miguel Arcanjo','São Miguel','São Cristóvão','São João Batista','São Sebastião','São Roque',
+  'Santa Rita','Santa Teresinha','Santa Luzia','Santa Terezinha','Padre Pio','Anjo da Guarda',
+  'Nossa Senhora','Santo','Santa','São',
+];
+function extrairSanto(title){
+  const t=title||'';
+  for(const s of SANTOS_CONHECIDOS){
+    if(t.toLowerCase().includes(s.toLowerCase()))return s;
+  }
+  return '';
 }
 
 async function refreshCard(id){
@@ -743,9 +791,32 @@ async function refreshCard(id){
 async function aprovar(id){
   const sel=SELS[id];
   const body={item_id:id,action:'APROVAR'};
-  if(sel)body.fields={shopify_product_id:sel.product_id,produto_identificado:sel.title,confianca_correspondencia:1.0,status_correspondencia:'VINCULADO_MANUALMENTE'};
+  const fields={};
+  if(sel){
+    fields.shopify_product_id=sel.product_id;
+    fields.confianca_correspondencia=1.0;
+    fields.status_correspondencia='VINCULADO_MANUALMENTE';
+  }
+  // Se o painel de edição está aberto, grava os valores dos campos (escolha do usuário)
+  const g=s=>{const el=document.getElementById(s);return el?el.value.trim():null;};
+  const desc=g(`ef-desc-${id}`);
+  const santo=g(`ef-santo-${id}`);
+  const cat=g(`ef-cat-${id}`);
+  const mat=g(`ef-mat-${id}`);
+  const altRaw=g(`ef-alt-${id}`);
+  const precoRaw=g(`ef-preco-${id}`);
+  if(desc)fields.produto_identificado=desc;
+  else if(sel)fields.produto_identificado=sel.title; // fallback: usa título do produto escolhido
+  if(santo)fields.santo_devocao=santo;
+  if(cat)fields.categoria=cat;
+  if(mat)fields.material=mat;
+  if(altRaw&&altRaw!=='')fields.altura_valor=Number(altRaw);
+  if(precoRaw&&precoRaw!=='')fields.preco_valor=Number(precoRaw);
+  // Se escolheu produto mas não editou descrição, usa o título do produto (nunca o palpite errado da IA)
+  if(sel&&!desc)fields.produto_identificado=sel.title;
+  if(Object.keys(fields).length)body.fields=fields;
   await exec(id,body);
-  delete SELS[id];delete ESELS[id];delete EOPEN[id];
+  delete SELS[id];delete ESELS[id];delete EOPEN[id];delete PENDING_FIELDS[id];
 }
 async function acao(id,action){await exec(id,{item_id:id,action});}
 async function exec(id,body){
