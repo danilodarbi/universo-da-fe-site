@@ -439,12 +439,15 @@ function card(it,res){
     :`<div class="desc-none">${it.ai_error?'⚠ Erro na análise — use ✎ para corrigir':'🔍 Sem análise — use ✎ Editar ou reprocesse com ANTHROPIC_API_KEY'}</div>`;
 
   // Alertas
-  let cands=[], alertas=[], qfoto=null, embalado=false;
+  let cands=[], alertas=[], qfoto=null, embalado=false, atributos=[];
   try{
     const raw=JSON.parse(it.ai_result_json||'{}');
     if(Array.isArray(raw)){cands=raw;}
-    else{cands=raw.candidates||[];alertas=raw.ai?.alertas||[];qfoto=raw.ai?.qualidade_foto||null;embalado=raw.ai?.produto_embalado||false;}
+    else{cands=raw.candidates||[];alertas=raw.ai?.alertas||[];qfoto=raw.ai?.qualidade_foto||null;embalado=raw.ai?.produto_embalado||false;atributos=raw.ai?.atributos_observados||[];}
   }catch{}
+  const atributosH=atributos.length?`<div style="font-size:10px;color:var(--muted);padding:4px 8px;background:var(--bg);border-radius:5px;line-height:1.5">
+    <span style="font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#5a7a9a">👁 Atributos vistos:</span> ${atributos.map(a=>e(a)).join(' · ')}
+  </div>`:'';
   const alertasH=alertas.length?`<div class="alertas-box">
     <div class="alertas-lbl">⚠ Atenção da IA</div>
     ${alertas.map(a=>`<div class="alerta-item">${e(a)}</div>`).join('')}
@@ -562,7 +565,7 @@ function card(it,res){
     <div class="cb">
       <div class="cm"><span class="fn" title="${e(it.file_name)}">${e(it.file_name)}</span>
         <span class="badge st-${it.status}">${it.status.replace(/_/g,' ')}</span></div>
-      ${descH}${alertasH}${bfg}${shopSug}${errH}${candsH}${edH}${actH}
+      ${descH}${atributosH}${alertasH}${bfg}${shopSug}${errH}${candsH}${edH}${actH}
     </div>
   </div>`;
 }

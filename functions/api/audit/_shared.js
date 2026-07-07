@@ -160,10 +160,10 @@ export async function driveListFolder(env, folderId, pageToken) {
 export async function fetchThumbnailAsBase64(env, thumbnailLink, driveFileId) {
   let buf = null;
 
-  // Tentativa 1: thumbnailLink direto (já vem com assinatura, NÃO usar Bearer)
+  // Tentativa 1: thumbnailLink direto em alta resolução (já vem assinado, NÃO usar Bearer)
   if (thumbnailLink) {
     try {
-      const url = thumbnailLink.replace(/=s\d+$/, '=s512');
+      const url = thumbnailLink.replace(/=s\d+$/, '=s1024');
       const res = await fetch(url);
       if (res.ok) buf = await res.arrayBuffer();
     } catch { /* tenta próxima */ }
@@ -177,7 +177,7 @@ export async function fetchThumbnailAsBase64(env, thumbnailLink, driveFileId) {
     if (metaRes.ok) {
       const meta = await metaRes.json();
       if (meta.thumbnailLink) {
-        const url = meta.thumbnailLink.replace(/=s\d+$/, '=s512');
+        const url = meta.thumbnailLink.replace(/=s\d+$/, '=s1024');
         const res = await fetch(url);
         if (res.ok) buf = await res.arrayBuffer();
       }
@@ -195,118 +195,101 @@ export async function fetchThumbnailAsBase64(env, thumbnailLink, driveFileId) {
 export async function analyzePhotoWithAnthropic(env, { imageBase64 }) {
   if (!env.ANTHROPIC_API_KEY) return null;
 
-  const prompt = `Você é o melhor catalogador de artigos religiosos católicos brasileiros do país, com 25 anos de experiência e conhecimento profundo de iconografia sacra, mercado varejista ES/Brasil e fotografia de produto. Analisa fotos para a loja "Universo da Fé" (Guarapari/ES).
+  const prompt = `Você é o maior especialista em iconografia católica e artigos religiosos do Brasil. Trabalha catalogando produtos para a loja "Universo da Fé" (Guarapari/ES). Sua análise precisa ser CIRÚRGICA e HONESTA.
 
-═══ PASSO 1 — QUALIDADE DA FOTO ═══
-Avalie antes de tudo:
-- A foto está nítida ou borrada?
-- A iluminação é adequada ou há sombras/escuridão?
-- O produto está em embalagem (caixa/saco plástico) ou exposto?
-- Há múltiplos produtos no enquadramento?
-Se a foto for ruim demais para identificação: confianca < 0.3 e alerta obrigatório.
+════════ METODOLOGIA DE ANÁLISE (siga na ordem) ════════
 
-═══ PASSO 2 — TIPO DO PRODUTO ═══
-Identifique com precisão:
-• IMAGEM_DEVOCIONAL: estátua/imagem de santo em resina, madeira, gesso, metal
-• TERCO: rosário completo com 59 contas (5 grupos de 10 + separadores + crucifixo)
-• DEZENA: apenas 10 contas + crucifixo + medalha (menor que terço)
-• ESCAPULARIO: dois pedaços de tecido/metal unidos por cordão/corrente
-• QUADRO: imagem impressa ou pintada em suporte plano (tela, madeira, papel, acrílico)
-• CHAVEIRO: argola metálica + elemento devocional
-• PULSEIRA: aro ou elástico com contas/medalhas devocionais
-• KIT_DEVOCIONAL: conjunto de 2+ itens diferentes embalados juntos
-• OUTRO: vela, incenso, água benta, terço de parede, medalha avulsa, etc.
+ETAPA 1 — EXAME VISUAL SISTEMÁTICO
+Antes de concluir qualquer coisa, examine mentalmente a imagem em regiões, como se estivesse dando zoom:
+a) ZOOM no objeto inteiro: qual o formato geral? (estátua vertical, contas em fio, tecido retangular, moldura plana)
+b) ZOOM no rosto/figura central: expressão, postura, o que segura nas mãos, o que veste
+c) ZOOM nos detalhes pequenos: gravações em medalhas, texto em etiquetas, cor exata das contas, tipo de crucifixo
+d) ZOOM no entorno: há embalagem? etiqueta com nome/preço? outros produtos juntos? referência de tamanho (mão, prateleira)?
 
-═══ PASSO 3 — IDENTIFICAÇÃO DO SANTO ═══
-Use a iconografia. Seja conservador: se não tiver certeza, escreva o que VÊ.
+ETAPA 2 — CLASSIFICAÇÃO DO TIPO
+Conte os elementos para não confundir:
+• TERÇO = 59 contas no total (5 dezenas de 10 + 6 contas maiores "Pai-Nosso" + crucifixo + medalha central). É um círculo fechado que pende do crucifixo.
+• DEZENA = apenas 10 contas + crucifixo + 1 medalha. Muito menor, cabe na palma.
+• ESCAPULARIO = DOIS retângulos (de tecido, feltro, plastificado ou metal) unidos por DOIS cordões/correntes. Cada retângulo tem uma imagem. NÃO tem contas.
+• IMAGEM_DEVOCIONAL = estátua tridimensional de um santo.
+• QUADRO = imagem 2D plana em moldura, tela, madeira ou papel.
+• MEDALHA avulsa, CHAVEIRO, PULSEIRA, KIT.
 
-IMAGENS/ESTÁTUAS — atributos visuais específicos:
-• São Bento: HÁBITO PRETO beneditino, cálice com serpente na mão, corvo ao lado, medalha redonda com cruz
-• São Francisco de Assis: HÁBITO MARROM, animais ao redor (pombas, lobo), mãos com estigmas, pomba no ombro
-• Nossa Senhora Aparecida: figura PEQUENA e NEGRA (cerâmica queimada), coroa dourada, manto azul/dourado — ATENÇÃO: bem menor que outras imagens
-• Nossa Senhora das Graças / Medianeira: braços abertos para BAIXO, raios de luz saindo das mãos, globo terrestre
-• Nossa Senhora de Fátima: manto BRANCO com borda dourada, mãos unidas em oração, expressão de doçura
-• Nossa Senhora do Carmo: manto MARROM/OURO, escapulário marrom na mão, às vezes Menino Jesus no braço
-• Nossa Senhora Aparecida grande: mesma figura negra mas em versão maior para altar
-• Imaculada Conceição: veste BRANCA, manto AZUL, mãos unidas, lua crescente embaixo dos pés, rosas
-• Nossa Senhora de Lourdes: BRANCA, cinto AZUL, gruta ao fundo, expressão contemplativa
-• Nossa Senhora Desatadora dos Nós: fita com nós sendo desatada, pomba, manto branco/azul
-• Nossa Senhora do Perpétuo Socorro: ícone PLANO (não estátua), Menino Jesus nos braços de Maria com anjos segurando instrumentos da Paixão
-• Nossa Senhora da Penha: imagem no alto de uma ROCHA/pedra, coroa, manto
-• Sagrado Coração de Jesus: CORAÇÃO exposto no peito com chamas e coroa de espinhos, dedo apontando para o coração
-• Jesus Misericordioso: figura de Jesus com RAIOS vermelho e branco saindo do coração, mão direita levantada
-• Divino Espírito Santo: POMBA BRANCA com asas abertas, halo dourado, línguas de fogo
-• Santo Antônio: HÁBITO MARROM franciscano, Menino Jesus NOS BRAÇOS, livro na outra mão — DIFERENÇA de São Francisco: Santo Antônio tem o Menino Jesus
-• São José: homem com BARBA, cetro com LÍRIO BRANCO, Menino Jesus ao lado/no braço
-• Padre Pio: HÁBITO MARROM capuchinho, BARBA, LUVAS/MITTENS nas mãos cobrindo estigmas
-• São Jorge: ARMADURA metálica, cavalo branco, LANÇA ou espada, DRAGÃO embaixo do cavalo
-• Santa Rita: ESPINHO na TESTA, rosas ao redor, hábito agostiniano ESCURO
-• São Sebastião: corpo AMARRADO em árvore ou coluna, FLECHAS cravadas no corpo
-• Santa Luzia: OLHOS em bandeja ou prato, palma do martírio, hábito vermelho
-• São João Batista: PELE DE ANIMAL (cordeiro/camelo), cajado com CRUZ no topo, cordeiro ao lado
-• São Miguel Arcanjo: ASAS, ARMADURA, lança apontada para DEMÔNIO embaixo dos pés
-• Anjo da Guarda: ASAS, geralmente guiando criança, veste branca ou colorida
-• São Cristóvão: GIGANTE com CRIANÇA nos ombros atravessando rio, bastão de árvore
-• Santa Teresinha: hábito carmelita MARROM/BEGE, rosas, crucifixo com rosas
-• São Roque: ferida exposta na PERNA, CAO ao lado, trajes de PEREGRINO
+ATENÇÃO ESCAPULÁRIO METÁLICO: se vê duas plaquetas de metal retangulares/ovais ligadas por corrente, com imagens gravadas — é ESCAPULARIO, categoria ESCAPULARIO. As gravações costumam ser: Sagrado Coração de Jesus (um lado) + Nossa Senhora do Carmo (outro lado) = "Escapulário do Carmo". Ou Nossa Senhora Aparecida. Examine a gravação COM ATENÇÃO antes de dizer "não identificado".
 
-TERÇOS E ESCAPULÁRIOS — observe:
-• Cor das contas (azul=NS Aparecida, branca=NS Fátima, verde=NS Perpetuo Socorro, preta=São Bento, marrom=NS Carmo, vermelha=Sagrado Coração)
-• Material das contas: plástico, madeira, pedra (olho de tigre, madrepérola, hematita, turmalina)
-• Cor e material do crucifixo: dourado, prateado, madeira
-• Tipo de cordão/corrente: fio nylon, corrente metálica, fio de seda, cordão de couro
+ETAPA 3 — IDENTIFICAÇÃO DO SANTO POR ICONOGRAFIA
+Use esta base. Procure os ATRIBUTOS antes de nomear:
 
-SE O SANTO NÃO ESTIVER NA LISTA ACIMA: descreva o que você vê (cor do hábito, objetos nas mãos, atributos) e marque confianca < 0.5.
+IMAGENS/ESTÁTUAS:
+• São Bento → hábito PRETO, segura cruz/báculo, livro "CSPB" (Cruz de São Bento), às vezes cálice com serpente e corvo. Medalha de São Bento tem a cruz com letras CSPB/CSSML/NDSMD.
+• São Francisco de Assis → hábito MARROM com corda de 3 nós, pássaros/lobo, estigmas nas mãos, tonsura
+• Santo Antônio → hábito MARROM, segura MENINO JESUS + livro + lírio branco. (Menino Jesus = Santo Antônio, não São Francisco)
+• São José → túnica, MENINO JESUS + lírio ou ferramentas de carpinteiro, barba
+• Nossa Senhora Aparecida → PEQUENA, figura ESCURA/NEGRA, coroa e manto dourado/azul sobre vestido, mãos juntas. Frequentemente sobre nuvem com anjos.
+• Nossa Senhora de Fátima → manto BRANCO com fios dourados, coroa, mãos em prece, às vezes com pastorinhos
+• Nossa Senhora das Graças / Milagrosa → manto branco/azul, braços ABERTOS para baixo com raios saindo das mãos, pisa serpente
+• Imaculada Conceição → vestido branco, manto azul, pisa lua/serpente, mãos juntas, olhar para cima
+• Nossa Senhora de Lourdes → branca com faixa AZUL na cintura, rosas amarelas nos pés, mãos em prece
+• Nossa Senhora Desatadora dos Nós → segura fita comprida com nós, anjos
+• Nossa Senhora do Carmo → manto marrom carmelita, segura escapulário e Menino Jesus
+• Sagrado Coração de Jesus → coração VISÍVEL no peito com chamas/espinhos, mão apontando ou abençoando
+• Imaculado Coração de Maria → coração no peito com rosas e espada
+• Divino Espírito Santo → POMBA branca com raios (não é figura humana)
+• São Jorge → SOLDADO em armadura sobre CAVALO, lança matando DRAGÃO
+• Santa Rita → hábito preto agostiniano, ferida/espinho na TESTA, crucifixo e rosas
+• Santa Teresinha → hábito carmelita marrom, segura CRUCIFIXO com ROSAS
+• Padre Pio → hábito marrom, barba branca, LUVAS marrons (estigmas), óculos às vezes
+• São Judas Tadeu → veste verde/marrom, medalhão com rosto de Cristo no peito, chama na cabeça, bastão
+• São Miguel Arcanjo → guerreiro alado com espada/lança vencendo demônio
+• Nossa Senhora Rainha / Medianeira → coroa, cetro, manto real
+• Menino Jesus de Praga → criança coroada com veste real e globo
 
-═══ PASSO 4 — ESTIMATIVA DE TAMANHO ═══
-Use APENAS referências visuais presentes na foto. Nunca estime sem referência.
-• Mãos de adulto visíveis: palma ≈ 9-10cm, largura ≈ 8cm, comprimento total ≈ 18cm
-• Se a imagem cabe na palma da mão = ~10-15cm
-• Se a imagem tem a altura de um adulto segurando = ~20-30cm
-• Caixa de papelão para imagem de 20cm tem ~22cm de altura
-• Caixa de papelão para imagem de 30cm tem ~33cm de altura
-• Prateleira padrão tem ~30-35cm de altura
-• Se SEM referência: altura_cm = null e alerta obrigatório
+ESCAPULÁRIOS E MEDALHAS — leia a gravação:
+• "Escapulário do Carmo" = Nossa Senhora do Carmo + Sagrado Coração
+• Medalha de São Bento = cruz central com iniciais CSPB
+• Cores de terço por devoção: preto→São Bento; azul→N.Sra; branco→Fátima; vermelho→Sagrado Coração; verde→N.Sra das Graças/São Judas; marrom/madeira→Carmo ou Francisco
 
-═══ PASSO 5 — PRECIFICAÇÃO ═══
-Referências mercado ES (Guarapari/Grande Vitória) 2025:
-Imagem resina: 10cm→R$25-40 | 15cm→R$40-60 | 20cm→R$55-85 | 25cm→R$80-120 | 30cm→R$100-150 | 40cm→R$150-230 | 50cm+→R$230-400
-Imagem madeira: +35-50% sobre resina equivalente
-Imagem metal/zamac: R$45-200 dependendo tamanho
-Terço plástico/acrílico: R$18-30 | Terço madeira: R$35-60 | Terço pedra semipreciosa: R$50-100 | Terço metal: R$45-90
-Dezena: R$12-25 | Escapulário simples (tecido): R$15-28 | Escapulário metal/bordado: R$28-65
-Quadro pequeno (<A4): R$35-65 | Médio (A4): R$55-100 | Grande: R$90-200
-Chaveiro: R$12-25 | Pulseira: R$18-45 | Kit devocional: R$45-100
+Se após examinar os atributos você ainda não tem certeza: dê o NOME MAIS PROVÁVEL com confianca adequada (0.5-0.7) e liste a dúvida em alertas — NÃO desista com "não identificado" se há pistas. Só use "Não identificado" se realmente não há atributo legível.
 
-RETORNE SOMENTE este JSON válido, sem texto antes ou depois, sem markdown:
+ETAPA 4 — MATERIAL: resina (mais comum, plástico duro pintado), madeira, gesso, metal/zamac, aço inox (escapulários/correntes), tecido/feltro (escapulários), acrílico, papel (quadros)
+
+ETAPA 5 — TAMANHO: só estime se houver referência visual (mão≈18cm, palma≈9cm, dedos, prateleira≈32cm, embalagem). Sem referência → altura_cm null.
+
+ETAPA 6 — PREÇO (mercado ES 2025):
+Imagem resina: 10cm R$25-40 | 15cm R$40-60 | 20cm R$55-85 | 25cm R$80-120 | 30cm R$100-150 | 40cm R$150-230 | 50cm+ R$230-400
+Imagem madeira: +40% | metal: R$45-200
+Terço plástico R$18-30 | madeira R$35-60 | pedra R$50-100 | metal R$45-90
+Dezena R$12-25 | Escapulário tecido R$15-28 | Escapulário metal/aço R$30-70
+Quadro peq R$35-65 | médio R$55-100 | grande R$90-200 | Chaveiro R$12-25 | Pulseira R$18-45
+
+════════ RETORNE SOMENTE ESTE JSON (sem texto fora, sem markdown) ════════
 {
-  "descricao": "frase completa: [tipo] de [santo/devoção] em [material], [tamanho se conhecido], [cor/detalhe principal]",
+  "descricao": "frase completa e precisa: tipo + santo + material + tamanho + detalhe distintivo",
   "categoria": "IMAGEM_DEVOCIONAL|TERCO|DEZENA|ESCAPULARIO|QUADRO|CHAVEIRO|PULSEIRA|KIT_DEVOCIONAL|OUTRO",
-  "santo": "nome completo e preciso, ex: Nossa Senhora de Fátima — ou 'Não identificado: [descreva o que vê]'",
-  "material": "resina|madeira|metal|tecido|acrílico|papel|gesso|zamac|misto|null",
-  "altura_cm": número inteiro ou null,
-  "cor": "cores dominantes e tipo de acabamento, ex: branco com detalhes dourados, base oval bege",
-  "preco_sugerido_brl": número inteiro ou null,
-  "preco_referencia": "tabela usada + justificativa, ex: imagem resina 20cm mercado ES 2025 ≈ R$55-85, sugerindo R$65 pelo acabamento médio",
-  "titulo_shopify": "máx 60 chars — padrão: [Santo] – [Tipo] [Detalhe | Tamanho]",
-  "descricao_shopify": "2-3 frases devocionais, tom respeitoso e acolhedor, sem emojis, sem exclamações, max 300 chars",
+  "santo": "nome mais provável baseado na iconografia — só 'Não identificado' se não houver NENHUM atributo legível",
+  "material": "resina|madeira|metal|aço inox|tecido|acrílico|papel|gesso|zamac|misto|null",
+  "altura_cm": número ou null,
+  "cor": "cores e acabamento específicos",
+  "preco_sugerido_brl": número ou null,
+  "preco_referencia": "tabela usada + justificativa",
+  "titulo_shopify": "máx 60 chars: [Santo] – [Tipo] [Detalhe|Tamanho|Material]",
+  "descricao_shopify": "2-3 frases devocionais respeitosas, sem emojis, max 300 chars",
   "qualidade_foto": "BOA|REGULAR|RUIM",
-  "produto_embalado": true,
-  "multiplos_produtos": false,
+  "produto_embalado": true/false,
+  "multiplos_produtos": true/false,
   "confianca": 0.0,
-  "necessita_revisao": true,
+  "necessita_revisao": true/false,
+  "atributos_observados": ["liste os atributos visuais concretos que você viu e usou para identificar, ex: habito preto, cruz CSPB, medalha redonda"],
   "alertas": []
 }
 
-REGRAS FINAIS:
-• confianca 0.85-1.0: certeza total — santo claro, material visível, categoria óbvia
-• confianca 0.65-0.84: provável — alguma dúvida em um campo
-• confianca 0.40-0.64: incerto — santo duvidoso, foto parcial, estimativa de tamanho sem referência
-• confianca 0.00-0.39: muito incerto — foto ruim, produto irreconhecível
-• necessita_revisao = false SOMENTE SE confianca >= 0.80 E santo identificado (não "Não identificado") E categoria definida
-• alertas[]: SEMPRE preencha quando: santo incerto, tamanho sem referência, foto com problema, embalagem tampando, múltiplos produtos, confusão possível entre dois santos
-• NUNCA invente. Se não vê, escreve null ou "Não identificado"
-• titulo_shopify: ex "São Bento – Imagem Resina 20 cm" ou "Nossa Senhora Aparecida – Imagem Resina" ou "Terço de São Bento – Contas Pretas | Madeira"`;
+REGRAS:
+• Examine os atributos ANTES de nomear o santo. Cite o que viu em "atributos_observados".
+• confianca: 0.85+ certeza total | 0.65-0.84 provável | 0.4-0.64 incerto mas com pista | <0.4 sem pista
+• necessita_revisao=false SOMENTE se confianca>=0.80 E santo identificado E categoria certa
+• alertas: liste dúvidas específicas e acionáveis (ex: "verificar gravação da medalha com lupa", "confirmar se é Carmo ou Aparecida")
+• Prefira arriscar o nome mais provável com confianca média a desistir com "não identificado"
+• NUNCA invente atributo que não vê`;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -317,7 +300,7 @@ REGRAS FINAIS:
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
+      max_tokens: 1536,
       temperature: 0,
       messages: [{
         role: 'user',
