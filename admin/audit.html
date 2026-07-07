@@ -114,6 +114,8 @@ main{padding:18px 20px;max-width:1400px;margin:0 auto}
 .bfi-v.null{color:var(--muted);font-style:italic;font-weight:400;font-size:11px}
 .bfi.price{border-color:var(--gold-dim);background:#1a1500}
 .bfi.price .bfi-v{color:var(--gold);font-size:12px;font-weight:700}
+.bfi.price-etiqueta{border-color:#2e5c3a;background:#0d1a12}
+.bfi.price-etiqueta .bfi-v{color:var(--ok-fg)}
 .bfi.full{grid-column:1/-1}
 
 /* Qualidade foto */
@@ -460,6 +462,9 @@ function card(it,res){
   };
   const preco=it.preco_valor!=null?`R$ ${Number(it.preco_valor).toFixed(0)}`:null;
   const precoRef=it.preco_fonte||null;
+  const isEtiqueta=precoRef&&precoRef.includes('[ETIQUETA]');
+  const precoClass=isEtiqueta?'price price-etiqueta':'price';
+  const precoLabel=isEtiqueta?'Preço (da etiqueta) ✓':'Preço sugerido';
   const metaRow=qfoto?`<div style="display:flex;gap:5px;flex-wrap:wrap">
     <span class="qfoto ${qfoto}">${qfoto==='BOA'?'✓ Foto boa':qfoto==='REGULAR'?'~ Foto regular':'✗ Foto ruim'}</span>
     ${embalado?'<span class="qfoto REGULAR">📦 Embalado</span>':''}
@@ -470,8 +475,8 @@ function card(it,res){
     ${f('Material',it.material)}
     ${f('Cor',it.cor)}
     ${f('Altura estimada',it.altura_valor!=null?`${it.altura_valor} cm`:null)}
-    ${f('Preço sugerido',preco,'price')}
-    ${precoRef?`<div class="bfi full"><div class="bfi-l">Ref. de preço</div><div class="bfi-v" style="font-size:11px;color:var(--muted)">${e(precoRef)}</div></div>`:''}
+    ${f(precoLabel,preco,precoClass)}
+    ${precoRef?`<div class="bfi full"><div class="bfi-l">Ref. de preço</div><div class="bfi-v" style="font-size:11px;color:${isEtiqueta?'var(--ok-fg)':'var(--muted)'}">${e(precoRef.replace(/^\[(ETIQUETA|ESTIMATIVA)\]\s*/,''))}</div></div>`:''}
   </div>`:'';
 
   // Shopify sugestão

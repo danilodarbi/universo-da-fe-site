@@ -255,7 +255,16 @@ ETAPA 4 — MATERIAL: resina (mais comum, plástico duro pintado), madeira, gess
 
 ETAPA 5 — TAMANHO: só estime se houver referência visual (mão≈18cm, palma≈9cm, dedos, prateleira≈32cm, embalagem). Sem referência → altura_cm null.
 
-ETAPA 6 — PREÇO (mercado ES 2025):
+ETAPA 6 — PREÇO (PRIORIDADE: LER A ETIQUETA)
+⚠ MUITAS FOTOS TÊM O PREÇO ESCRITO NUMA ETIQUETA, ADESIVO OU PLACA. Procure com atenção:
+- Etiqueta de preço colada no produto ou na embalagem
+- Adesivo redondo/retangular com número
+- Placa de papel ao lado do produto
+- Texto escrito "R$ XX" ou "XX,00" em qualquer lugar da foto
+Se ENCONTRAR o preço escrito: use EXATAMENTE esse valor em preco_sugerido_brl, marque preco_fonte="ETIQUETA" e em preco_referencia escreva "Preço lido da etiqueta na foto: R$ XX". Este é o preço REAL da loja, sempre prefira ele sobre estimativa.
+Se NÃO houver preço visível na foto: estime pela tabela abaixo e marque preco_fonte="ESTIMATIVA".
+
+Tabela de estimativa (mercado ES 2025), usar SÓ quando não há etiqueta:
 Imagem resina: 10cm R$25-40 | 15cm R$40-60 | 20cm R$55-85 | 25cm R$80-120 | 30cm R$100-150 | 40cm R$150-230 | 50cm+ R$230-400
 Imagem madeira: +40% | metal: R$45-200
 Terço plástico R$18-30 | madeira R$35-60 | pedra R$50-100 | metal R$45-90
@@ -271,7 +280,8 @@ Quadro peq R$35-65 | médio R$55-100 | grande R$90-200 | Chaveiro R$12-25 | Puls
   "altura_cm": número ou null,
   "cor": "cores e acabamento específicos",
   "preco_sugerido_brl": número ou null,
-  "preco_referencia": "tabela usada + justificativa",
+  "preco_fonte": "ETIQUETA|ESTIMATIVA",
+  "preco_referencia": "se ETIQUETA: 'Preço lido da etiqueta: R$ XX'. Se ESTIMATIVA: tabela usada + justificativa",
   "titulo_shopify": "máx 60 chars: [Santo] – [Tipo] [Detalhe|Tamanho|Material]",
   "descricao_shopify": "2-3 frases devocionais respeitosas, sem emojis, max 300 chars",
   "qualidade_foto": "BOA|REGULAR|RUIM",

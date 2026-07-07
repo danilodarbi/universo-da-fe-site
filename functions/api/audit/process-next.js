@@ -110,7 +110,7 @@ export async function onRequest(context) {
       ai?.altura_cm != null ? 'AUDITORIA' : null,
       ai?.confianca         ?? null,
       ai?.preco_sugerido_brl ?? null,
-      ai?.preco_referencia  || null,
+      ai ? `[${ai.preco_fonte || 'ESTIMATIVA'}] ${ai.preco_referencia || ''}`.trim() : null,
       ai?.titulo_shopify    || null,
       ai?.descricao_shopify || null,
       ai?.confianca         ?? null,
