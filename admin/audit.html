@@ -598,18 +598,23 @@ function copiarPromptGPT(id){
   // Busca dados do card na tela
   const cardEl=document.getElementById('card-'+id);
   const desc=cardEl?.querySelector('.desc-banner')?.textContent?.trim()||'';
-  const prompt=`Edit the attached photo. This is a real product photograph${desc?` of: ${desc}`:''}. Turn it into a professional e-commerce image. Follow these rules with zero deviation.
+  const prompt=`Edit the attached photo. This is a real product photograph${desc?` of: ${desc}`:''} of a Catholic devotional item. Turn it into a clean professional e-commerce image. Follow every rule with zero deviation.
 
-ABSOLUTE RULE — DO NOT ALTER THE PRODUCT:
-Keep the devotional item 100% identical to the original — the exact same saint or religious figure, the exact same face, pose, colors, paint details, material, texture, proportions and shape. Do not repaint, redesign, beautify or "improve" the product. Do not swap the saint. Do not change gold to silver or any color. Only the background and lighting around it may change.
+ABSOLUTE RULE — THE PRODUCT MUST STAY 100% IDENTICAL:
+Keep the item exactly as in the original — same saint or figure, same face, pose, colors, paint, material, texture, proportions and shape. Do NOT repaint, redesign, beautify or improve it. Do NOT swap the saint. Do NOT change gold to silver or any color. The product is untouchable.
 
-WHAT TO CHANGE — ONLY BACKGROUND AND LIGHT:
-Replace the background with a clean, bright, airy scene: the product resting on a light warm-white marble or travertine surface, with soft eucalyptus or olive branches blurred in the background. Neutral cream, beige and ivory tones. Natural soft daylight from the side, gentle diffused shadows. Clean negative space around the product.
+REMOVE THESE (important):
+1. PLASTIC PACKAGING: if the product is inside a plastic bag, shrink wrap or blister, remove the packaging completely and show the bare clean product, unwrapped. No plastic wrinkles or reflections.
+2. PRICE TAGS/STICKERS: remove any price tag, sticker, label, barcode or handwritten price near the product. No price visible.
+3. CLUTTER: remove any other object, hand or box. Show ONLY this single product.
 
-REALISM — MUST LOOK LIKE A REAL PHOTO, NOT AI:
-Authentic photograph look, professional camera, 50mm lens. Natural grain, true textures, realistic soft shadows, accurate reflections. Keep original imperfections. No digital-art look, no plastic smoothness, no glow, no CGI feel. Shallow depth of field, product in sharp focus.
+BACKGROUND AND LIGHT:
+Clean unwrapped product on light warm-white marble/travertine, soft eucalyptus or olive branches blurred behind. Cream, beige, ivory tones. Natural soft side daylight, gentle shadows, clean negative space.
 
-FORMAT: square 1:1, high resolution, editorial product photography, calm reverent mood for a Catholic goods store. Output one photorealistic image.`;
+REALISM (not AI):
+Real photograph, professional camera, 50mm lens. Natural grain, true textures, realistic soft shadows and reflections. Keep real imperfections. No digital-art look, no plastic smoothness, no glow, no CGI. Shallow depth of field, product sharp.
+
+FORMAT: square 1:1, high resolution, editorial product photography, calm reverent mood for a Catholic goods store. Output one photorealistic image of the clean product.`;
   navigator.clipboard.writeText(prompt).then(()=>{
     log('Prompt copiado! Agora: 2. Abrir foto original → anexa no ChatGPT → cola o prompt → gera','ok');
     // Feedback visual no próprio botão

@@ -6,18 +6,23 @@
 
 import { jsonResponse, corsPreflight, requireAuth, fetchThumbnailAsBase64 } from './_shared.js';
 
-const PROMPT = `Edit the attached photo. This is a real product photograph of a Catholic devotional item. Turn it into a professional e-commerce image. Follow these rules with zero deviation.
+const PROMPT = `Edit the attached photo. This is a real product photograph of a Catholic devotional item (a saint statue, rosary, scapular, medal or similar). Turn it into a clean professional e-commerce image. Follow every rule with zero deviation.
 
-ABSOLUTE RULE — DO NOT ALTER THE PRODUCT:
-Keep the devotional item 100% identical to the original — the exact same saint or religious figure, the exact same face, pose, colors, paint details, material, texture, proportions and shape. Do not repaint, redesign, beautify or improve the product. Do not swap the saint. Do not change gold to silver or any color. Only the background and lighting around it may change.
+ABSOLUTE RULE — THE PRODUCT ITSELF MUST STAY 100% IDENTICAL:
+Keep the devotional item exactly as in the original — the same saint or religious figure, the same face, expression, pose, colors, paint details, material, texture, proportions and shape. Do NOT repaint, redesign, beautify, restyle or "improve" the product. Do NOT swap the saint. Do NOT change gold to silver or alter any color of the product. The product is untouchable.
 
-WHAT TO CHANGE — ONLY BACKGROUND AND LIGHT:
-Replace the background with a clean, bright, airy scene: the product resting on a light warm-white marble or travertine surface, with soft eucalyptus or olive branches blurred in the background. Neutral cream, beige and ivory tones. Natural soft daylight from the side, gentle diffused shadows. Clean negative space around the product.
+REMOVE THESE THINGS (very important):
+1. PLASTIC PACKAGING: if the product is inside a plastic bag, shrink wrap, blister, or any transparent/clear packaging, REMOVE the packaging completely and show the bare product clean, as if unwrapped. No plastic wrinkles, no reflections from plastic, no bag.
+2. PRICE TAGS AND STICKERS: remove any price tag, price sticker, adhesive label, barcode, handwritten price, or paper tag attached to or near the product. The final image must have NO price and NO labels visible.
+3. CLUTTER: remove any other product, hand, box, shelf clutter or distracting object. Show ONLY this single product.
+
+WHAT TO CHANGE — BACKGROUND AND LIGHT:
+Place the clean unwrapped product on a light warm-white marble or travertine surface, with soft eucalyptus or olive branches blurred in the background. Neutral cream, beige and ivory tones. Natural soft daylight from the side, gentle diffused shadows. Generous clean negative space around the product.
 
 REALISM — MUST LOOK LIKE A REAL PHOTO, NOT AI:
-Authentic photograph look, professional camera, 50mm lens. Natural grain, true textures, realistic soft shadows, accurate reflections. Keep original imperfections. No digital-art look, no plastic smoothness, no glow, no CGI feel. Shallow depth of field, product in sharp focus.
+Authentic photograph, professional camera, 50mm lens. Natural grain, true textures, realistic soft shadows, accurate reflections on the product surface. Keep the product's real imperfections. No digital-art look, no plastic-smooth skin, no glow, no CGI. Shallow depth of field with the product in sharp focus and the background softly blurred.
 
-FORMAT: square, high resolution, editorial product photography, calm reverent mood for a Catholic goods store. Output one photorealistic image.`;
+FORMAT: square, high resolution, editorial product photography, calm and reverent mood for a Catholic goods store. Output one single photorealistic image of the clean product on the new background.`;
 
 export async function onRequest(context) {
   const { request, env } = context;
