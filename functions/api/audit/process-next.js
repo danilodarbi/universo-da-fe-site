@@ -80,6 +80,13 @@ export async function onRequest(context) {
       })),
     });
 
+    // Helper: garante número ou null para colunas REAL (evita erro string/blob)
+    const num = (v) => {
+      if (v === null || v === undefined || v === '') return null;
+      const n = Number(String(v).replace(/[^\d.,-]/g, '').replace(',', '.'));
+      return Number.isNaN(n) ? null : n;
+    };
+
     await env.DB.prepare(
       `UPDATE audit_records SET
         status                  = 'PRONTO_PARA_REVISAO',
@@ -106,14 +113,14 @@ export async function onRequest(context) {
       ai?.santo             || null,
       ai?.material          || null,
       ai?.cor               || null,
-      ai?.altura_cm         ?? null,
+      num(ai?.altura_cm),
       ai?.altura_cm != null ? 'AUDITORIA' : null,
-      ai?.confianca         ?? null,
-      ai?.preco_sugerido_brl ?? null,
+      num(ai?.confianca),
+      num(ai?.preco_sugerido_brl),
       ai ? `[${ai.preco_fonte || 'ESTIMATIVA'}] ${ai.preco_referencia || ''}`.trim() : null,
       ai?.titulo_shopify    || null,
       ai?.descricao_shopify || null,
-      ai?.confianca         ?? null,
+      num(ai?.confianca),
       aiResultJson,
       necessita ? 1 : 0,
       item.id
