@@ -95,7 +95,8 @@ main{padding:18px 20px;max-width:1400px;margin:0 auto}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(295px,1fr));gap:12px}
 
 /* Card */
-.card{background:var(--surf);border:1px solid var(--border);border-radius:11px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .2s}
+.card{background:var(--surf);border:1px solid var(--border);border-radius:11px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .2s,opacity .35s,transform .35s}
+.card.card-saindo{opacity:0;transform:scale(.92)}
 .card:hover{border-color:var(--gold-dim)}
 .card.res{opacity:.55}
 .ci{width:100%;height:180px;object-fit:contain;background:#070910;display:block;cursor:zoom-in}
@@ -869,8 +870,8 @@ function card(it,res){
     </div>`;
   }
 
-  // Edit panel
-  const showEd=!res&&EOPEN[it.id];
+  // Edit panel — disponível em TODOS os cards, inclusive resolvidos
+  const showEd=EOPEN[it.id];
   // Valores: prioriza escolha pendente do usuário sobre o palpite da IA
   const pf=PENDING_FIELDS[it.id]||{};
   const vDesc = pf.produto_identificado!=null?pf.produto_identificado:(it.produto_identificado||'');
@@ -931,8 +932,9 @@ function card(it,res){
     const L={APROVADO:'✓ Aprovado',REPROVADO:'✗ Reprovado',PRECISA_DE_NOVA_FOTO:'↻ Nova foto',PRECISA_DE_AJUSTE:'✎ Ajuste'};
     // Botão de salvar/aprovar também em resolvidos (menos os já aprovados)
     const aprovarBtn=it.status!=='APROVADO'?`<button class="aa" style="width:100%;margin-top:6px" onclick="aprovar(${it.id})">✓ Salvar e Aprovar produto</button>`:'';
+    const reprovarBtn=it.status!=='REPROVADO'?`<button class="arj" style="width:100%;margin-top:6px" onclick="acao(${it.id},'REPROVAR')">✗ Reprovar</button>`:'';
     actH=`<div class="res-l">${L[it.status]||it.status}</div>
-    ${aprovarBtn}
+    ${aprovarBtn}${reprovarBtn}
     <button class="btn-editar-tudo" onclick="togEd(${it.id})">✏️ ${EOPEN[it.id]?'Fechar edição':'Editar tudo'}</button>
     ${pasteZone(it,it.shopify_product_id)}`;
   }
@@ -1241,9 +1243,29 @@ async function exec(id,body){
     if(r.error==='aprovacao_bloqueada'){log('Bloqueado: '+r.reason,'er');alert('Não pode aprovar: '+r.reason);return;}
     if(r.error){log('Erro: '+r.error,'er');return;}
     log(`Item ${id}: ${r.status}`,r.status==='APROVADO'?'ok':'');
-    await refreshCard(id);
+    // Ações que mudam o item de aba: remove o card da tela com animação
+    const MOVE_ACTIONS=['REPROVAR','APROVAR','SOLICITAR_NOVA_FOTO'];
+    if(MOVE_ACTIONS.includes(body.action)){
+      removerCard(id);
+    } else {
+      await refreshCard(id);
+    }
     await atualizarContagens();
   }catch(err){log('Erro: '+err.message,'er');}
+}
+
+// Remove o card da tela com fade — item foi para outra aba
+function removerCard(id){
+  const el=document.getElementById('card-'+id);
+  if(!el)return;
+  el.classList.add('card-saindo');
+  setTimeout(()=>{
+    el.remove();
+    // Atualiza o contador da seção "Aguardando revisão" se existir
+    const ss=document.querySelector('.sh .ss');
+    const grid=document.querySelector('.grid');
+    if(ss&&grid)ss.textContent=`${grid.children.length} foto(s)`;
+  },350);
 }
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
