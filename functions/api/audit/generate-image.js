@@ -82,7 +82,7 @@ export async function onRequest(context) {
 // ── Gemini (Nano Banana — gemini-2.5-flash-image) ─────────────────────────────
 async function generateWithGemini(env, imageB64) {
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${env.GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${(env.GEMINI_API_KEY || '').replace(/[\s\r\n]+/g, '')}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -122,7 +122,7 @@ async function generateWithOpenAI(env, imageB64) {
 
   const res = await fetch('https://api.openai.com/v1/images/edits', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}` },
+    headers: { Authorization: `Bearer ${(env.OPENAI_API_KEY || '').replace(/[\s\r\n]+/g, '')}` },
     body: form,
   });
   const data = await res.json();

@@ -304,7 +304,7 @@ REGRAS:
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': env.ANTHROPIC_API_KEY,
+      'x-api-key': (env.ANTHROPIC_API_KEY || '').replace(/[\s\r\n]+/g, ''),
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
@@ -375,7 +375,7 @@ ${RESPONSE_SCHEMA_HINT}`;
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${(env.OPENAI_API_KEY || '').replace(/[\s\r\n]+/g, '')}`,
     },
     body: JSON.stringify({
       model: 'gpt-4o',
