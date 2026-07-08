@@ -83,7 +83,7 @@ export async function onRequest(context) {
       break;
     }
     case 'CORRIGIR':
-      newStatus = 'PRONTO_PARA_REVISAO'; // salva correção, mantém na fila
+      newStatus = refreshed.status; // mantém o status atual — só atualiza os campos, item não muda de aba
       break;
     case 'REPROVAR':
       newStatus = 'REPROVADO';
