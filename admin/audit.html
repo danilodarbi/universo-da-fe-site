@@ -904,10 +904,19 @@ function extrairSanto(title){
 }
 
 async function refreshCard(id){
-  if(!batchId)return;
-  const r=await api('batch-status?batch_id='+batchId);
-  if(r.error)return;
-  const it=r.items.find(i=>i.id===id);
+  // Busca o item individualmente — funciona em qualquer aba (não só no lote atual)
+  let it=null;
+  try{
+    const r=await api('records?status=__byid__&item_id='+id);
+    if(r.item)it=r.item;
+  }catch{}
+  // Fallback: tenta pelo lote atual
+  if(!it&&batchId){
+    try{
+      const r=await api('batch-status?batch_id='+batchId);
+      if(!r.error)it=r.items.find(i=>i.id===id);
+    }catch{}
+  }
   if(!it)return;
   const el=document.getElementById('card-'+id);
   if(!el)return;

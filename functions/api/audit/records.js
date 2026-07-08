@@ -18,6 +18,14 @@ export async function onRequest(context) {
 
   const url = new URL(request.url);
   const status = url.searchParams.get('status');
+  const itemId = url.searchParams.get('item_id');
+
+  // Busca um único item por id (para refresh de card em qualquer aba)
+  if (itemId) {
+    const item = await env.DB.prepare(`SELECT * FROM audit_records WHERE id = ?`).bind(itemId).first();
+    return jsonResponse({ item: item || null });
+  }
+
   const limit  = Math.min(Number(url.searchParams.get('limit')  || 24), 50);
   const offset = Math.max(Number(url.searchParams.get('offset') || 0), 0);
 
