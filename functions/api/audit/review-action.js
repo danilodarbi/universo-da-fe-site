@@ -56,10 +56,19 @@ export async function onRequest(context) {
   if (fields && typeof fields === 'object') {
     const sets = [];
     const vals = [];
+    const NUMERIC = new Set(['altura_valor','altura_confianca','peso_valor','peso_confianca','preco_valor','confianca_correspondencia']);
     for (const key of EDITABLE) {
       if (key in fields) {
+        let v = fields[key];
+        // Sanitiza: campos numéricos viram número ou null (nunca NaN/string vazia)
+        if (NUMERIC.has(key)) {
+          if (v === null || v === '' || v === undefined) v = null;
+          else { const n = Number(v); v = Number.isNaN(n) ? null : n; }
+        } else if (v === undefined) {
+          v = null;
+        }
         sets.push(`${key} = ?`);
-        vals.push(fields[key]);
+        vals.push(v);
       }
     }
     if (sets.length) {

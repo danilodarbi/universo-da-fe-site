@@ -198,6 +198,8 @@ main{padding:18px 20px;max-width:1400px;margin:0 auto}
 .ae{padding:7px 9px;background:var(--surf2);color:var(--text);border:1px solid var(--blue);border-radius:5px;cursor:pointer;font-size:12px;font-weight:600}
 .ae:hover{background:var(--blue-bg)}
 .res-l{text-align:center;padding:4px;font-size:11px;font-weight:600;color:var(--muted)}
+.btn-editar-tudo{width:100%;margin-top:8px;padding:9px;background:var(--surf2);color:var(--gold);border:1px solid var(--gold-dim);border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;transition:background .15s}
+.btn-editar-tudo:hover{background:#2a2000}
 
 /* Paste box (contenteditable target) */
 .paste-box{margin-top:8px;padding:10px;border:1px solid var(--blue);border-radius:8px;background:var(--bg)}
@@ -446,16 +448,20 @@ function cardSimples(it){
 // ── Card completo ─────────────────────────────────────────────────────────────
 // ── Salvar campo individual inline (sem re-render, mantém foco) ────────────────
 async function salvarCampo(id, field, value, type){
-  let val = value.trim();
-  if(val==='') val = null;
-  else if(type==='number') val = Number(val);
+  let val = (value==null?'':String(value)).trim();
+  if(val===''){
+    val = null;
+  } else if(type==='number'){
+    const n = Number(val);
+    if(Number.isNaN(n)){ log(`"${value}" não é um número válido`,'er'); return; }
+    val = n;
+  }
   try{
     const r=await api('review-action',{method:'POST',body:JSON.stringify({
       item_id:id, action:'CORRIGIR', fields:{[field]:val}
     })});
     if(r.error){log(`Erro ao salvar ${field}: ${r.error}`,'er');return;}
-    log(`Salvo: ${field} = ${val==null?'(vazio)':val}`,'ok');
-    // Atualiza contagens sem re-renderizar o card (mantém o que o usuário está editando)
+    log(`✓ Salvo: ${field} = ${val==null?'(vazio)':val}`,'ok');
   }catch(err){log('Erro: '+err.message,'er');}
 }
 
@@ -663,16 +669,17 @@ function card(it,res){
     const canAp=!!(sel||linked);
     actH=`<div class="acts">
       <button class="aa" ${canAp?'':'disabled'} onclick="aprovar(${it.id})">${sel?'✓ Vincular e Aprovar':'✓ Aprovar'}</button>
-      <button class="ae" onclick="togEd(${it.id})" title="Editar / Vincular">✎</button>
       <button class="ask" onclick="acao(${it.id},'PULAR')">Pular</button>
       <button class="anf" onclick="acao(${it.id},'SOLICITAR_NOVA_FOTO')" title="Nova foto">📷</button>
       <button class="arj" onclick="acao(${it.id},'REPROVAR')" title="Reprovar">✗</button>
     </div>
+    <button class="btn-editar-tudo" onclick="togEd(${it.id})">✏️ ${EOPEN[it.id]?'Fechar edição':'Editar tudo (descrição, preço, produto)'}</button>
     ${pasteZone(it,linked||sel)}`;
   } else {
     const L={APROVADO:'✓ Aprovado',REPROVADO:'✗ Reprovado',PRECISA_DE_NOVA_FOTO:'↻ Nova foto',PRECISA_DE_AJUSTE:'✎ Ajuste'};
     actH=`<div class="res-l">${L[it.status]||it.status}</div>
-    ${(it.status==='PRECISA_DE_NOVA_FOTO'||it.shopify_product_id)?pasteZone(it,it.shopify_product_id):''}`;
+    <button class="btn-editar-tudo" onclick="togEd(${it.id})">✏️ ${EOPEN[it.id]?'Fechar edição':'Editar tudo'}</button>
+    ${pasteZone(it,it.shopify_product_id)}`;
   }
 
   return `<div class="card${res?' res':''}" id="card-${it.id}">
