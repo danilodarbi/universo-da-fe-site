@@ -220,6 +220,12 @@ main{padding:18px 20px;max-width:1400px;margin:0 auto}
 
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* Toast */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);background:var(--surf);border:1px solid var(--border);color:var(--text);padding:14px 24px;border-radius:10px;font-size:14px;font-weight:600;z-index:9999;transition:transform .3s ease;box-shadow:0 8px 30px rgba(0,0,0,.5);max-width:80vw;text-align:center}
+#toast.toast-show{transform:translateX(-50%) translateY(0)}
+#toast.toast-ok{border-color:#2e5c3a;color:var(--ok-fg);background:#0d1f13}
+#toast.toast-er{border-color:var(--err);color:var(--err-fg);background:#1f0d0d}
 </style>
 </head>
 <body>
@@ -306,6 +312,22 @@ function log(msg,t=''){
   d.textContent=`[${new Date().toTimeString().slice(0,8)}] ${msg}`;
   w.prepend(d);
   while(w.children.length>30)w.removeChild(w.lastChild);
+  // Toast grande e visível para feedbacks importantes
+  if(t==='ok'||t==='er')toast(msg,t);
+}
+
+let toastTimer=null;
+function toast(msg,type){
+  let el=document.getElementById('toast');
+  if(!el){
+    el=document.createElement('div');
+    el.id='toast';
+    document.body.appendChild(el);
+  }
+  el.textContent=(type==='ok'?'✓ ':'⚠ ')+msg;
+  el.className='toast-show toast-'+type;
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>{el.className='';},3500);
 }
 
 // ── Global counts ─────────────────────────────────────────────────────────────
@@ -514,9 +536,18 @@ Authentic photograph look, professional camera, 50mm lens. Natural grain, true t
 
 FORMAT: square 1:1, high resolution, editorial product photography, calm reverent mood for a Catholic goods store. Output one photorealistic image.`;
   navigator.clipboard.writeText(prompt).then(()=>{
-    log('Prompt copiado! Cole no ChatGPT junto com a foto original.','ok');
+    log('Prompt copiado! Agora: 2. Abrir foto original → anexa no ChatGPT → cola o prompt → gera','ok');
+    // Feedback visual no próprio botão
+    const btns=document.querySelectorAll(`#card-${id} .gpt-btn`);
+    if(btns[0]){
+      const orig=btns[0].textContent;
+      btns[0].textContent='✓ Copiado!';
+      btns[0].style.borderColor='var(--ok-fg)';
+      btns[0].style.color='var(--ok-fg)';
+      setTimeout(()=>{btns[0].textContent=orig;btns[0].style.borderColor='';btns[0].style.color='';},2500);
+    }
   }).catch(()=>{
-    log('Não consegui copiar automaticamente — permita acesso à área de transferência','er');
+    log('Não consegui copiar — permita acesso à área de transferência','er');
   });
 }
 
