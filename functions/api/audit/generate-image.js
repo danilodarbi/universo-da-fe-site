@@ -6,23 +6,28 @@
 
 import { jsonResponse, corsPreflight, requireAuth, fetchThumbnailAsBase64 } from './_shared.js';
 
-const PROMPT = `Edit the attached photo. This is a real product photograph of a Catholic devotional item (a saint statue, rosary, scapular, medal or similar). Turn it into a clean professional e-commerce image. Follow every rule with zero deviation.
+const PROMPT = `Professional product photography edit. The attached photo shows a real Catholic devotional product sold by a store. Recreate it as a premium e-commerce photo, exactly in the style of the brand "House of Joppa": bright, airy, serene, editorial.
 
-ABSOLUTE RULE — THE PRODUCT ITSELF MUST STAY 100% IDENTICAL:
-Keep the devotional item exactly as in the original — the same saint or religious figure, the same face, expression, pose, colors, paint details, material, texture, proportions and shape. Do NOT repaint, redesign, beautify, restyle or "improve" the product. Do NOT swap the saint. Do NOT change gold to silver or alter any color of the product. The product is untouchable.
+THE PRODUCT IS SACRED — REPRODUCE IT EXACTLY:
+Reproduce the product with complete fidelity: same saint/figure, same face and expression, same colors, same metal tone (silver stays silver, gold stays gold), same bead count and bead color, same crucifix design, same medal engravings, same proportions, same size relationships between parts. Zero creative liberty on the product itself.
 
-REMOVE THESE THINGS (very important):
-1. PLASTIC PACKAGING: if the product is inside a plastic bag, shrink wrap, blister, or any transparent/clear packaging, REMOVE the packaging completely and show the bare product clean, as if unwrapped. No plastic wrinkles, no reflections from plastic, no bag.
-2. PRICE TAGS AND STICKERS: remove any price tag, price sticker, adhesive label, barcode, handwritten price, or paper tag attached to or near the product. The final image must have NO price and NO labels visible.
-3. CLUTTER: remove any other product, hand, box, shelf clutter or distracting object. Show ONLY this single product.
+CLEAN THE PRODUCT (remove everything that is not the product):
+- Remove plastic bags, shrink wrap, blisters, packaging cards and backing cards completely
+- Remove price tags, stickers, barcodes, handwritten labels
+- Remove pins, clips, hands, boxes and any clutter
+- Show the bare product alone, as if professionally unwrapped and styled
 
-WHAT TO CHANGE — BACKGROUND AND LIGHT:
-Place the clean unwrapped product on a light warm-white marble or travertine surface, with soft eucalyptus or olive branches blurred in the background. Neutral cream, beige and ivory tones. Natural soft daylight from the side, gentle diffused shadows. Generous clean negative space around the product.
+SCENE (House of Joppa signature look):
+- Surface: light warm-white marble or creamy travertine stone with subtle natural veining
+- Props: a few sprigs of eucalyptus or olive branches at the edges of the frame, softly out of focus — they frame the product, never cover it
+- Palette: warm white, cream, ivory, soft beige — bright and luminous overall
+- Light: soft natural window daylight from one side, delicate elongated shadows, gentle highlights on metal and beads
+- Composition: product laid flat (flat lay, top-down) for rosaries/chaplets/scapulars, or standing at slight angle for statues; generous negative space; product perfectly centered as the hero
 
-REALISM — MUST LOOK LIKE A REAL PHOTO, NOT AI:
-Authentic photograph, professional camera, 50mm lens. Natural grain, true textures, realistic soft shadows, accurate reflections on the product surface. Keep the product's real imperfections. No digital-art look, no plastic-smooth skin, no glow, no CGI. Shallow depth of field with the product in sharp focus and the background softly blurred.
+PHOTOREALISM (critical — must NOT look AI-generated):
+Looks like a photo from a professional product photographer with a full-frame camera and 50mm macro lens. Fine natural film grain, true material textures (pearl sheen, metal patina, wood grain), physically-accurate soft shadows and reflections, slight natural imperfections preserved. Absolutely no digital-art smoothness, no HDR glow, no oversaturation, no plastic skin, no painterly strokes, no CGI rendering feel.
 
-FORMAT: square, high resolution, editorial product photography, calm and reverent mood for a Catholic goods store. Output one single photorealistic image of the clean product on the new background.`;
+OUTPUT: one square high-resolution photorealistic image of the exact same product, cleaned and beautifully staged.`;
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -49,12 +54,14 @@ export async function onRequest(context) {
     let generatedB64 = null;
     let provider = null;
 
-    if (env.GEMINI_API_KEY) {
-      provider = 'gemini';
-      generatedB64 = await generateWithGemini(env, originalB64);
-    } else {
+    // OpenAI (gpt-image-1) é o mesmo motor do ChatGPT — resultado muito melhor.
+    // Prioriza OpenAI; usa Gemini só se não houver chave OpenAI.
+    if (env.OPENAI_API_KEY) {
       provider = 'openai';
       generatedB64 = await generateWithOpenAI(env, originalB64);
+    } else {
+      provider = 'gemini';
+      generatedB64 = await generateWithGemini(env, originalB64);
     }
 
     if (!generatedB64) throw new Error('IA não retornou imagem');
@@ -127,7 +134,8 @@ async function generateWithOpenAI(env, imageB64) {
   form.append('image', new Blob([bytes], { type: 'image/jpeg' }), 'original.jpg');
   form.append('prompt', PROMPT);
   form.append('size', '1024x1024');
-  form.append('quality', 'medium');
+  form.append('quality', 'high');
+  form.append('input_fidelity', 'high');
 
   const res = await fetch('https://api.openai.com/v1/images/edits', {
     method: 'POST',

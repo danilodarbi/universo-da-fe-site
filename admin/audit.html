@@ -543,7 +543,32 @@ function pasteZone(it, hasProduct){
     <div class="paste-target" id="pz-${it.id}" contenteditable="true"
       onpaste="handlePaste(event,${it.id},'${eq(pid)}')"
       data-placeholder="3. Cole aqui a foto gerada (Ctrl+V)"></div>
+    <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+      <button class="gpt-btn" style="flex:1" onclick="document.getElementById('file-${it.id}').click()">📁 Ou enviar arquivo do computador</button>
+      <input type="file" id="file-${it.id}" accept="image/*" style="display:none" onchange="enviarArquivo(event,${it.id},'${eq(pid)}')"/>
+    </div>
   </div>`;
+}
+
+// Upload por seleção de arquivo — alternativa garantida ao Ctrl+V
+async function enviarArquivo(ev, id, productId){
+  const file=ev.target.files?.[0];
+  if(!file)return;
+  const pz=document.getElementById('pz-'+id);
+  if(pz){pz.classList.add('uploading');pz.textContent='Comprimindo e salvando…';}
+  try{
+    const b64=await compressImage(file);
+    const r=await api('upload-image',{method:'POST',body:JSON.stringify({
+      item_id:id, product_id:productId||null, image_base64:b64, filename:`produto-${id}.jpg`,
+    })});
+    if(r.error){log('Erro: '+r.error,'er');if(pz){pz.classList.remove('uploading');pz.textContent='Erro — tente de novo';}return;}
+    log('Foto salva ✓ — use as abas Original/Nova para comparar','ok');
+    PZ_RESET[id]=false;
+    await refreshCard(id);
+  }catch(err){
+    log('Erro: '+err.message,'er');
+    if(pz){pz.classList.remove('uploading');pz.textContent='Erro — tente de novo';}
+  }
 }
 
 // ── Geração automática de foto com IA ─────────────────────────────────────────
@@ -602,7 +627,7 @@ async function gerarFotosLote(){
   if(r.error)return;
   const alvos=r.items.filter(i=>i.status==='PRONTO_PARA_REVISAO'&&!i.imagem_enviada);
   if(!alvos.length){log('Nenhum item sem foto nova neste lote','er');return;}
-  if(!confirm(`Gerar fotos com IA para ${alvos.length} item(ns)? (~R$0,25 cada)`))return;
+  if(!confirm(`Gerar fotos com IA para ${alvos.length} item(ns)? (~R$1 cada em alta qualidade)`))return;
   genBatchRunning=true;
   const btn=document.getElementById('btnGenLote');
   if(btn)btn.disabled=true;
@@ -611,12 +636,18 @@ async function gerarFotosLote(){
     if(btn)btn.textContent=`⏳ ${ok+fail+1}/${alvos.length}…`;
     try{
       const rr=await api('generate-image',{method:'POST',body:JSON.stringify({item_id:it.id})});
-      if(rr.error){fail++;log(`Item ${it.id}: ${rr.error}`,'er');}
-      else{ok++;log(`Item ${it.id}: foto gerada ✓`);}
+      if(rr.error){fail++;log(`Item ${it.id}: ${rr.error}`,'er');await refreshCard(it.id);continue;}
+      // Imagem veio grande — comprime no navegador e salva (igual ao individual)
+      if(rr.needs_compression&&rr.image_base64){
+        const comprimida=await comprimirDataUrl(rr.image_base64);
+        const r2=await api('upload-image',{method:'POST',body:JSON.stringify({item_id:it.id,image_base64:comprimida})});
+        if(r2.error){fail++;log(`Item ${it.id}: erro ao salvar — ${r2.error}`,'er');await refreshCard(it.id);continue;}
+      }
+      ok++;log(`Item ${it.id}: foto gerada ✓`);
       await refreshCard(it.id);
     }catch(err){fail++;log(`Item ${it.id}: ${err.message}`,'er');}
   }
-  log(`Fotos do lote: ${ok} geradas, ${fail} falhas`,fail?'er':'ok');
+  log(`Fotos do lote: ${ok} geradas, ${fail} falha(s)`,fail?'er':'ok');
   genBatchRunning=false;
   if(btn){btn.disabled=false;btn.textContent='✨ Gerar fotos do lote';}
 }
@@ -665,7 +696,10 @@ function abrirOriginal(id){
 
 function trocarFoto(id){
   PZ_RESET[id]=true;
-  refreshCard(id);
+  refreshCard(id).then(()=>{
+    // Foca a caixa de colar automaticamente — Ctrl+V funciona direto
+    setTimeout(()=>{const pz=document.getElementById('pz-'+id);if(pz)pz.focus();},150);
+  });
 }
 
 async function handlePaste(ev, id, productId){
