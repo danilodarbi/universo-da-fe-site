@@ -217,6 +217,9 @@ main{padding:18px 20px;max-width:1400px;margin:0 auto}
 .gpt-row{display:flex;gap:5px;margin-bottom:7px}
 .gpt-btn{flex:1;padding:7px 8px;background:var(--surf2);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:border-color .15s}
 .gpt-btn:hover{border-color:var(--gold)}
+.gpt-btn-ai{border-color:#8b5cf6;color:#a78bfa;font-weight:700}
+.gpt-btn-ai:hover{border-color:#a78bfa;background:#1a1030}
+.gpt-btn-ai:disabled{opacity:.5;cursor:wait}
 
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
@@ -271,6 +274,7 @@ main{padding:18px 20px;max-width:1400px;margin:0 auto}
 
   <div class="ctrl">
     <button class="btn bg" onclick="processarProximos10()" id="btnP">▶ Processar próximos 10</button>
+    <button class="btn bd" onclick="gerarFotosLote()" id="btnGenLote" style="border-color:#8b5cf6;color:#a78bfa">✨ Gerar fotos do lote</button>
     <div class="sep"></div>
     <button class="btn bd" onclick="syncDrive()">🔄 Drive</button>
     <button class="btn bd" onclick="syncShopify()">🔄 Shopify</button>
@@ -520,8 +524,9 @@ async function salvarCampo(id, field, value, type){
 function pasteZone(it, hasProduct){
   const pid = it.shopify_product_id || (SELS[it.id]?.product_id) || '';
   const gptRow = `<div class="gpt-row">
-    <button class="gpt-btn" onclick="copiarPromptGPT(${it.id})" title="Copia o prompt pronto para o ChatGPT">📋 1. Copiar prompt</button>
-    <button class="gpt-btn" onclick="abrirOriginal(${it.id})" title="Abre a foto original em alta para anexar no ChatGPT">📷 2. Abrir foto original</button>
+    <button class="gpt-btn gpt-btn-ai" onclick="gerarFotoIA(${it.id})" id="genbtn-${it.id}" title="Gera a foto profissional automaticamente com IA">✨ Gerar foto IA</button>
+    <button class="gpt-btn" onclick="copiarPromptGPT(${it.id})" title="Ou manual: copia o prompt para o ChatGPT">📋 Prompt</button>
+    <button class="gpt-btn" onclick="abrirOriginal(${it.id})" title="Abre a foto original em alta">📷 Original</button>
   </div>`;
   if(it.imagem_enviada && !PZ_RESET[it.id]){
     return `<div class="paste-saved">
@@ -538,6 +543,54 @@ function pasteZone(it, hasProduct){
       onpaste="handlePaste(event,${it.id},'${eq(pid)}')"
       data-placeholder="3. Cole aqui a foto gerada (Ctrl+V)"></div>
   </div>`;
+}
+
+// ── Geração automática de foto com IA ─────────────────────────────────────────
+async function gerarFotoIA(id){
+  const btn=document.getElementById('genbtn-'+id);
+  if(btn){btn.disabled=true;btn.textContent='⏳ Gerando…';}
+  log(`Gerando foto do item ${id} com IA…`);
+  try{
+    const r=await api('generate-image',{method:'POST',body:JSON.stringify({item_id:id})});
+    if(r.error){
+      log('Erro: '+r.error,'er');
+      if(btn){btn.disabled=false;btn.textContent='✨ Gerar foto IA';}
+      return;
+    }
+    log(`Foto gerada (${r.provider}) — compare nas abas Original/Nova`,'ok');
+    await refreshCard(id);
+  }catch(err){
+    log('Erro: '+err.message,'er');
+    if(btn){btn.disabled=false;btn.textContent='✨ Gerar foto IA';}
+  }
+}
+
+// Gera fotos de todos os itens do lote sem foto nova
+let genBatchRunning=false;
+async function gerarFotosLote(){
+  if(genBatchRunning)return;
+  if(!batchId){log('Nenhum lote ativo — processe primeiro','er');return;}
+  const r=await api('batch-status?batch_id='+batchId);
+  if(r.error)return;
+  const alvos=r.items.filter(i=>i.status==='PRONTO_PARA_REVISAO'&&!i.imagem_enviada);
+  if(!alvos.length){log('Nenhum item sem foto nova neste lote','er');return;}
+  if(!confirm(`Gerar fotos com IA para ${alvos.length} item(ns)? (~R$0,25 cada)`))return;
+  genBatchRunning=true;
+  const btn=document.getElementById('btnGenLote');
+  if(btn)btn.disabled=true;
+  let ok=0,fail=0;
+  for(const it of alvos){
+    if(btn)btn.textContent=`⏳ ${ok+fail+1}/${alvos.length}…`;
+    try{
+      const rr=await api('generate-image',{method:'POST',body:JSON.stringify({item_id:it.id})});
+      if(rr.error){fail++;log(`Item ${it.id}: ${rr.error}`,'er');}
+      else{ok++;log(`Item ${it.id}: foto gerada ✓`);}
+      await refreshCard(it.id);
+    }catch(err){fail++;log(`Item ${it.id}: ${err.message}`,'er');}
+  }
+  log(`Fotos do lote: ${ok} geradas, ${fail} falhas`,fail?'er':'ok');
+  genBatchRunning=false;
+  if(btn){btn.disabled=false;btn.textContent='✨ Gerar fotos do lote';}
 }
 
 // Prompt de edição de foto, personalizado com os dados do produto
