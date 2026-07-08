@@ -63,13 +63,12 @@ function base64url(bytes) {
     return btoa(unescape(encodeURIComponent(bytes)))
       .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
-  // Conversão em chunks para evitar "Maximum call stack size exceeded"
-  // em imagens grandes (spread de Uint8Array enorme estoura o call stack)
+  // Conversão SEM spread operator — loop byte a byte nunca estoura o call stack,
+  // mesmo em imagens grandes (o spread ...array tem limite de argumentos)
   const uint8 = new Uint8Array(bytes);
   let binary = '';
-  const CHUNK = 8192;
-  for (let i = 0; i < uint8.length; i += CHUNK) {
-    binary += String.fromCharCode(...uint8.slice(i, i + CHUNK));
+  for (let i = 0; i < uint8.length; i++) {
+    binary += String.fromCharCode(uint8[i]);
   }
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
@@ -163,7 +162,7 @@ export async function fetchThumbnailAsBase64(env, thumbnailLink, driveFileId) {
   // Tentativa 1: thumbnailLink direto em alta resolução (já vem assinado, NÃO usar Bearer)
   if (thumbnailLink) {
     try {
-      const url = thumbnailLink.replace(/=s\d+$/, '=s1024');
+      const url = thumbnailLink.replace(/=s\d+$/, '=s768');
       const res = await fetch(url);
       if (res.ok) buf = await res.arrayBuffer();
     } catch { /* tenta próxima */ }
@@ -177,7 +176,7 @@ export async function fetchThumbnailAsBase64(env, thumbnailLink, driveFileId) {
     if (metaRes.ok) {
       const meta = await metaRes.json();
       if (meta.thumbnailLink) {
-        const url = meta.thumbnailLink.replace(/=s\d+$/, '=s1024');
+        const url = meta.thumbnailLink.replace(/=s\d+$/, '=s768');
         const res = await fetch(url);
         if (res.ok) buf = await res.arrayBuffer();
       }
