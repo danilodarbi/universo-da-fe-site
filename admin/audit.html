@@ -797,9 +797,10 @@ function card(it,res){
   // Actions
   let actH='';
   if(!res){
-    const canAp=!!(sel||linked);
+    // Habilita aprovar quando: produto vinculado OU selecionado OU identificado (backend aceita)
+    const canAp=!!(sel||linked||it.produto_identificado);
     actH=`<div class="acts">
-      <button class="aa" ${canAp?'':'disabled'} onclick="aprovar(${it.id})">${sel?'✓ Vincular e Aprovar':'✓ Aprovar'}</button>
+      <button class="aa" ${canAp?'':'disabled'} onclick="aprovar(${it.id})">${sel?'✓ Vincular e Aprovar':'✓ Salvar e Aprovar'}</button>
       <button class="ask" onclick="acao(${it.id},'PULAR')">Pular</button>
       <button class="anf" onclick="acao(${it.id},'SOLICITAR_NOVA_FOTO')" title="Nova foto">📷</button>
       <button class="arj" onclick="acao(${it.id},'REPROVAR')" title="Reprovar">✗</button>
@@ -808,7 +809,10 @@ function card(it,res){
     ${pasteZone(it,linked||sel)}`;
   } else {
     const L={APROVADO:'✓ Aprovado',REPROVADO:'✗ Reprovado',PRECISA_DE_NOVA_FOTO:'↻ Nova foto',PRECISA_DE_AJUSTE:'✎ Ajuste'};
+    // Botão de salvar/aprovar também em resolvidos (menos os já aprovados)
+    const aprovarBtn=it.status!=='APROVADO'?`<button class="aa" style="width:100%;margin-top:6px" onclick="aprovar(${it.id})">✓ Salvar e Aprovar produto</button>`:'';
     actH=`<div class="res-l">${L[it.status]||it.status}</div>
+    ${aprovarBtn}
     <button class="btn-editar-tudo" onclick="togEd(${it.id})">✏️ ${EOPEN[it.id]?'Fechar edição':'Editar tudo'}</button>
     ${pasteZone(it,it.shopify_product_id)}`;
   }
