@@ -199,14 +199,15 @@ main{padding:18px 20px;max-width:1400px;margin:0 auto}
 .ae:hover{background:var(--blue-bg)}
 .res-l{text-align:center;padding:4px;font-size:11px;font-weight:600;color:var(--muted)}
 
-/* Paste zone */
-.paste-zone{margin-top:8px;padding:12px;border:2px dashed var(--blue);border-radius:8px;background:var(--blue-bg);color:var(--blue);font-size:12px;font-weight:600;text-align:center;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s,border-color .15s;outline:none}
-.paste-zone:hover,.paste-zone:focus{background:#234a6e;border-color:#5b9bf6}
-.paste-zone .pz-icon{font-size:16px}
-.paste-zone.disabled{border-color:var(--border);background:var(--surf2);color:var(--muted);cursor:not-allowed;font-weight:400;font-size:11px}
-.paste-zone.uploading{border-color:var(--gold);background:#1a1500;color:var(--gold)}
-.paste-zone.done{border-color:#2e5c3a;border-style:solid;background:#14261a;color:var(--ok-fg);cursor:default}
-.paste-link-prompt{margin-top:8px;padding:10px;border:1px dashed var(--border);border-radius:8px;background:var(--bg)}
+/* Paste box (contenteditable target) */
+.paste-box{margin-top:8px;padding:10px;border:1px solid var(--blue);border-radius:8px;background:var(--bg)}
+.paste-box-label{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--blue);margin-bottom:6px}
+.paste-target{min-height:50px;border:2px dashed var(--blue);border-radius:6px;background:var(--blue-bg);padding:12px;cursor:text;color:var(--text);font-size:12px;outline:none;display:flex;align-items:center;justify-content:center;text-align:center;transition:background .15s}
+.paste-target:empty:before{content:attr(data-placeholder);color:var(--blue);font-weight:600}
+.paste-target:focus{background:#234a6e;border-color:#5b9bf6}
+.paste-target.uploading{border-color:var(--gold);background:#1a1500}
+.paste-target img{max-width:100%;border-radius:4px}
+.paste-zone.done{margin-top:8px;padding:12px;border:2px solid #2e5c3a;border-radius:8px;background:#14261a;color:var(--ok-fg);font-size:12px;font-weight:600;text-align:center;cursor:pointer}
 
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
@@ -462,66 +463,58 @@ async function salvarCampo(id, field, value, type){
 function pasteZone(it, hasProduct){
   const pid = it.shopify_product_id || (SELS[it.id]?.product_id) || '';
   if(it.imagem_enviada){
-    return `<div class="paste-zone done" onclick="verFotoEnviada(${it.id})" style="cursor:pointer">✓ Foto enviada${pid?' ao Shopify':''} — clique para ver</div>`;
+    return `<div class="paste-zone done" onclick="window.open('/api/audit/get-image?id=${it.id}&pwd=${encodeURIComponent(PWD)}','_blank')" style="cursor:pointer">✓ Foto salva — clique para ver</div>`;
   }
-  const destino = pid ? 'e envia ao Shopify' : '(salva no sistema)';
-  return `<div class="paste-zone" id="pz-${it.id}" tabindex="0"
-    onclick="focusPaste(${it.id})"
-    onpaste="handlePaste(event,${it.id},'${eq(pid)}')">
-    <span class="pz-icon">🖼️</span>
-    <span class="pz-text">Cole a foto aqui (Ctrl+V) ${destino}</span>
+  const destino = pid ? 'Envia ao Shopify' : 'Salva no sistema';
+  return `<div class="paste-box">
+    <div class="paste-box-label">🖼️ Nova foto (${destino})</div>
+    <div class="paste-target" id="pz-${it.id}" contenteditable="true"
+      onpaste="handlePaste(event,${it.id},'${eq(pid)}')"
+      data-placeholder="Clique aqui e aperte Ctrl+V para colar a foto"></div>
+    <div style="font-size:10px;color:var(--muted);margin-top:4px">Copie a imagem no ChatGPT (botão direito → Copiar imagem) e cole aqui</div>
   </div>`;
-}
-
-function verFotoEnviada(id){
-  window.open(`/api/audit/get-image?id=${id}&pwd=${encodeURIComponent(PWD)}`,'_blank');
-}
-
-function focusPaste(id){
-  const pz=document.getElementById('pz-'+id);
-  if(pz)pz.focus();
 }
 
 async function handlePaste(ev, id, productId){
   ev.preventDefault();
-  const items=(ev.clipboardData||ev.originalEvent?.clipboardData)?.items;
-  if(!items){log('Nada na área de transferência','er');return;}
+  const cd=ev.clipboardData||ev.originalEvent?.clipboardData||window.clipboardData;
+  const items=cd?.items;
+  if(!items){log('Não consegui ler a área de transferência','er');return;}
   let imgFile=null;
   for(const it of items){
-    if(it.type.startsWith('image/')){imgFile=it.getAsFile();break;}
+    if(it.type&&it.type.startsWith('image/')){imgFile=it.getAsFile();break;}
   }
-  if(!imgFile){log('A área de transferência não tem imagem — copie a foto no ChatGPT primeiro','er');return;}
-
   const pz=document.getElementById('pz-'+id);
-  if(pz){pz.classList.add('uploading');const t=pz.querySelector('.pz-text');if(t)t.textContent='Salvando…';}
+  if(!imgFile){
+    if(pz)pz.textContent='';
+    log('Não havia imagem colada. No ChatGPT: botão direito na imagem → Copiar imagem, depois cole aqui.','er');
+    return;
+  }
+
+  if(pz){pz.classList.add('uploading');pz.textContent='Salvando…';}
 
   try{
     const b64=await fileToBase64(imgFile);
     const r=await api('upload-image',{method:'POST',body:JSON.stringify({
-      item_id:id, product_id:productId||null, image_base64:b64,
-      filename:`produto-${id}.png`,
+      item_id:id, product_id:productId||null, image_base64:b64, filename:`produto-${id}.png`,
     })});
     if(r.error){
       log('Erro: '+r.error,'er');
-      if(pz){pz.classList.remove('uploading');const t=pz.querySelector('.pz-text');if(t)t.textContent='Erro — cole de novo';}
+      if(pz){pz.classList.remove('uploading');pz.textContent='Erro — cole de novo';}
       return;
     }
-    log(`Item ${id}: ${r.msg}`,'ok');
-    // Mostra a imagem colada no lugar da zona + na foto do card
-    if(pz){
-      pz.classList.remove('uploading');
-      pz.classList.add('done');
-      pz.style.cursor='pointer';
-      pz.innerHTML=`✓ Foto salva${r.shopify?' e enviada ao Shopify':''} — clique para ver`;
-      pz.onclick=()=>window.open(URL.createObjectURL(imgFile),'_blank');
-    }
-    // Atualiza a imagem principal do card com a foto nova
+    log(`Foto salva${r.shopify?' e enviada ao Shopify':''} ✓`,'ok');
+    // Mostra a imagem no card
+    const objUrl=URL.createObjectURL(imgFile);
     const cardEl=document.getElementById('card-'+id);
     const imgEl=cardEl?.querySelector('.ci');
-    if(imgEl){imgEl.src=URL.createObjectURL(imgFile);imgEl.style.display='block';}
+    if(imgEl){imgEl.src=objUrl;imgEl.style.display='block';}
+    // Substitui a box por confirmação
+    const box=pz?.closest('.paste-box');
+    if(box)box.innerHTML=`<div class="paste-zone done" onclick="window.open('${objUrl}','_blank')" style="cursor:pointer">✓ Foto salva — clique para ver</div>`;
   }catch(err){
     log('Erro: '+err.message,'er');
-    if(pz){pz.classList.remove('uploading');const t=pz.querySelector('.pz-text');if(t)t.textContent='Erro — cole de novo';}
+    if(pz){pz.classList.remove('uploading');pz.textContent='Erro — cole de novo';}
   }
 }
 
