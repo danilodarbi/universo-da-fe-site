@@ -116,6 +116,12 @@ main{padding:18px 20px;max-width:1400px;margin:0 auto}
 .bfi.price .bfi-v{color:var(--gold);font-size:12px;font-weight:700}
 .bfi.price-etiqueta{border-color:#2e5c3a;background:#0d1a12}
 .bfi.price-etiqueta .bfi-v{color:var(--ok-fg)}
+.bfi-input{width:100%;background:transparent;border:none;color:var(--text);font-size:11.5px;font-weight:500;font-family:'Inter',sans-serif;outline:none;padding:1px 0;border-bottom:1px solid transparent;transition:border-color .15s}
+.bfi-input:hover{border-bottom-color:var(--border)}
+.bfi-input:focus{border-bottom-color:var(--gold)}
+.bfi.price .bfi-input{color:var(--gold);font-weight:700;font-size:12px}
+.bfi.price-etiqueta .bfi-input{color:var(--ok-fg)}
+.bfi-input::placeholder{color:var(--muted);font-style:italic}
 .bfi.full{grid-column:1/-1}
 
 /* Qualidade foto */
@@ -200,6 +206,7 @@ main{padding:18px 20px;max-width:1400px;margin:0 auto}
 .paste-zone.disabled{border-color:var(--border);background:var(--surf2);color:var(--muted);cursor:not-allowed;font-weight:400;font-size:11px}
 .paste-zone.uploading{border-color:var(--gold);background:#1a1500;color:var(--gold)}
 .paste-zone.done{border-color:#2e5c3a;border-style:solid;background:#14261a;color:var(--ok-fg);cursor:default}
+.paste-link-prompt{margin-top:8px;padding:10px;border:1px dashed var(--border);border-radius:8px;background:var(--bg)}
 
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
@@ -436,16 +443,34 @@ function cardSimples(it){
 }
 
 // ── Card completo ─────────────────────────────────────────────────────────────
+// ── Salvar campo individual inline (sem re-render, mantém foco) ────────────────
+async function salvarCampo(id, field, value, type){
+  let val = value.trim();
+  if(val==='') val = null;
+  else if(type==='number') val = Number(val);
+  try{
+    const r=await api('review-action',{method:'POST',body:JSON.stringify({
+      item_id:id, action:'CORRIGIR', fields:{[field]:val}
+    })});
+    if(r.error){log(`Erro ao salvar ${field}: ${r.error}`,'er');return;}
+    log(`Salvo: ${field} = ${val==null?'(vazio)':val}`,'ok');
+    // Atualiza contagens sem re-renderizar o card (mantém o que o usuário está editando)
+  }catch(err){log('Erro: '+err.message,'er');}
+}
+
 // ── Colar imagem (Ctrl+V) → Shopify ───────────────────────────────────────────
 function pasteZone(it, hasProduct){
   const pid = it.shopify_product_id || (SELS[it.id]?.product_id) || '';
-  if(!pid){
-    return `<div class="paste-zone disabled" title="Vincule um produto antes de enviar foto">
-      🖼️ Vincule um produto para colar a nova foto aqui
-    </div>`;
-  }
   if(it.imagem_enviada){
     return `<div class="paste-zone done">✓ Foto enviada ao Shopify</div>`;
+  }
+  if(!pid){
+    // Sem produto vinculado — oferece busca rápida inline
+    return `<div class="paste-link-prompt">
+      <span style="font-size:11px;color:var(--muted)">Para enviar a foto, vincule um produto:</span>
+      <input class="es-inp" id="pzsearch-${it.id}" placeholder="Buscar produto Shopify..." oninput="srchPaste(${it.id},this.value)" style="margin-top:5px"/>
+      <div class="er-list" id="pzresults-${it.id}"></div>
+    </div>`;
   }
   return `<div class="paste-zone" id="pz-${it.id}" tabindex="0"
     onclick="focusPaste(${it.id})"
@@ -453,6 +478,39 @@ function pasteZone(it, hasProduct){
     <span class="pz-icon">🖼️</span>
     <span class="pz-text">Clique aqui e cole a foto (Ctrl+V)</span>
   </div>`;
+}
+
+// Busca produto direto na zona de colar (quando item precisa de foto mas não tem vínculo)
+let PZ_ST={};
+async function srchPaste(id,q){
+  clearTimeout(PZ_ST[id]);
+  const rl=document.getElementById('pzresults-'+id);
+  if(!rl)return;
+  if(!q.trim()){rl.innerHTML='';return;}
+  rl.innerHTML='<div class="er-hint">Buscando…</div>';
+  PZ_ST[id]=setTimeout(async()=>{
+    try{
+      const r=await api('search-products?q='+encodeURIComponent(q.trim()));
+      const ps=r.products||[];
+      if(!ps.length){rl.innerHTML='<div class="er-hint">Nenhum resultado.</div>';return;}
+      rl.innerHTML=ps.map(p=>`<button class="er-btn" onclick="vincularParaFoto(${id},'${eq(p.product_id)}','${eq(p.title)}')">
+        ${e(p.title)}<span style="color:var(--muted);font-size:10px;margin-left:5px">${e(p.product_type||'')}</span>
+      </button>`).join('');
+    }catch(err){rl.innerHTML='<div class="er-hint">Erro</div>';}
+  },350);
+}
+
+async function vincularParaFoto(id,pid,title){
+  // Vincula o produto e re-renderiza pra mostrar a zona de colar
+  try{
+    await api('review-action',{method:'POST',body:JSON.stringify({
+      item_id:id,action:'CORRIGIR',
+      fields:{shopify_product_id:pid,produto_identificado:title,confianca_correspondencia:1.0,status_correspondencia:'VINCULADO_MANUALMENTE'}
+    })});
+    SELS[id]={product_id:pid,title};
+    log(`Vinculado: "${title}" — agora cole a foto`,'ok');
+    await refreshCard(id);
+  }catch(err){log('Erro: '+err.message,'er');}
 }
 
 function focusPaste(id){
@@ -528,27 +586,32 @@ function card(it,res){
     ${alertas.map(a=>`<div class="alerta-item">${e(a)}</div>`).join('')}
   </div>`:'';
 
-  // Briefing
-  const f=(label,val,cls='')=>{
-    const empty=val==null||val==='';
-    return `<div class="bfi ${cls}"><div class="bfi-l">${label}</div><div class="bfi-v${empty?' null':''}">${empty?'—':e(String(val))}</div></div>`;
+  // Briefing — campos editáveis inline, salvam ao sair do campo (onblur)
+  const fEdit=(label,field,val,type='text',cls='')=>{
+    const v=val==null?'':val;
+    return `<div class="bfi ${cls}">
+      <div class="bfi-l">${label}</div>
+      <input class="bfi-input" type="${type==='number'?'number':'text'}" value="${e(String(v))}"
+        onblur="salvarCampo(${it.id},'${field}',this.value,'${type}')"
+        onkeydown="if(event.key==='Enter')this.blur()" placeholder="—"/>
+    </div>`;
   };
-  const preco=it.preco_valor!=null?`R$ ${Number(it.preco_valor).toFixed(0)}`:null;
+  const preco=it.preco_valor;
   const precoRef=it.preco_fonte||null;
   const isEtiqueta=precoRef&&precoRef.includes('[ETIQUETA]');
   const precoClass=isEtiqueta?'price price-etiqueta':'price';
-  const precoLabel=isEtiqueta?'Preço (da etiqueta) ✓':'Preço sugerido';
+  const precoLabel=isEtiqueta?'Preço etiqueta ✓':'Preço (R$)';
   const metaRow=qfoto?`<div style="display:flex;gap:5px;flex-wrap:wrap">
     <span class="qfoto ${qfoto}">${qfoto==='BOA'?'✓ Foto boa':qfoto==='REGULAR'?'~ Foto regular':'✗ Foto ruim'}</span>
     ${embalado?'<span class="qfoto REGULAR">📦 Embalado</span>':''}
   </div>`:'';
   const bfg=hasAI?`${metaRow}<div class="bfg">
-    ${f('Categoria',it.categoria)}
-    ${f('Santo / Devoção',it.santo_devocao)}
-    ${f('Material',it.material)}
-    ${f('Cor',it.cor)}
-    ${f('Altura estimada',it.altura_valor!=null?`${it.altura_valor} cm`:null)}
-    ${f(precoLabel,preco,precoClass)}
+    ${fEdit('Categoria','categoria',it.categoria)}
+    ${fEdit('Santo / Devoção','santo_devocao',it.santo_devocao)}
+    ${fEdit('Material','material',it.material)}
+    ${fEdit('Cor','cor',it.cor)}
+    ${fEdit('Altura (cm)','altura_valor',it.altura_valor,'number')}
+    ${fEdit(precoLabel,'preco_valor',preco,'number',precoClass)}
     ${precoRef?`<div class="bfi full"><div class="bfi-l">Ref. de preço</div><div class="bfi-v" style="font-size:11px;color:${isEtiqueta?'var(--ok-fg)':'var(--muted)'}">${e(precoRef.replace(/^\[(ETIQUETA|ESTIMATIVA)\]\s*/,''))}</div></div>`:''}
   </div>`:'';
 
