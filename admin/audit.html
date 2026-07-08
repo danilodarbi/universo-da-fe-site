@@ -193,6 +193,14 @@ main{padding:18px 20px;max-width:1400px;margin:0 auto}
 .ae:hover{background:var(--blue-bg)}
 .res-l{text-align:center;padding:4px;font-size:11px;font-weight:600;color:var(--muted)}
 
+/* Paste zone */
+.paste-zone{margin-top:8px;padding:12px;border:2px dashed var(--blue);border-radius:8px;background:var(--blue-bg);color:var(--blue);font-size:12px;font-weight:600;text-align:center;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s,border-color .15s;outline:none}
+.paste-zone:hover,.paste-zone:focus{background:#234a6e;border-color:#5b9bf6}
+.paste-zone .pz-icon{font-size:16px}
+.paste-zone.disabled{border-color:var(--border);background:var(--surf2);color:var(--muted);cursor:not-allowed;font-weight:400;font-size:11px}
+.paste-zone.uploading{border-color:var(--gold);background:#1a1500;color:var(--gold)}
+.paste-zone.done{border-color:#2e5c3a;border-style:solid;background:#14261a;color:var(--ok-fg);cursor:default}
+
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 </style>
@@ -428,6 +436,71 @@ function cardSimples(it){
 }
 
 // ── Card completo ─────────────────────────────────────────────────────────────
+// ── Colar imagem (Ctrl+V) → Shopify ───────────────────────────────────────────
+function pasteZone(it, hasProduct){
+  const pid = it.shopify_product_id || (SELS[it.id]?.product_id) || '';
+  if(!pid){
+    return `<div class="paste-zone disabled" title="Vincule um produto antes de enviar foto">
+      🖼️ Vincule um produto para colar a nova foto aqui
+    </div>`;
+  }
+  if(it.imagem_enviada){
+    return `<div class="paste-zone done">✓ Foto enviada ao Shopify</div>`;
+  }
+  return `<div class="paste-zone" id="pz-${it.id}" tabindex="0"
+    onclick="focusPaste(${it.id})"
+    onpaste="handlePaste(event,${it.id},'${eq(pid)}')">
+    <span class="pz-icon">🖼️</span>
+    <span class="pz-text">Clique aqui e cole a foto (Ctrl+V)</span>
+  </div>`;
+}
+
+function focusPaste(id){
+  const pz=document.getElementById('pz-'+id);
+  if(pz)pz.focus();
+}
+
+async function handlePaste(ev, id, productId){
+  ev.preventDefault();
+  const items=(ev.clipboardData||ev.originalEvent?.clipboardData)?.items;
+  if(!items){log('Nada na área de transferência','er');return;}
+  let imgFile=null;
+  for(const it of items){
+    if(it.type.startsWith('image/')){imgFile=it.getAsFile();break;}
+  }
+  if(!imgFile){log('A área de transferência não tem imagem — copie a foto no ChatGPT primeiro','er');return;}
+
+  const pz=document.getElementById('pz-'+id);
+  if(pz){pz.classList.add('uploading');pz.querySelector('.pz-text').textContent='Enviando ao Shopify…';}
+
+  try{
+    const b64=await fileToBase64(imgFile);
+    const r=await api('upload-image',{method:'POST',body:JSON.stringify({
+      item_id:id, product_id:productId, image_base64:b64,
+      filename:`produto-${id}.png`,
+    })});
+    if(r.error){
+      log('Erro upload: '+r.error,'er');
+      if(pz){pz.classList.remove('uploading');pz.querySelector('.pz-text').textContent='Erro — tente colar de novo';}
+      return;
+    }
+    log(`Item ${id}: foto enviada ao Shopify ✓`,'ok');
+    if(pz){pz.classList.remove('uploading');pz.classList.add('done');pz.innerHTML='✓ Foto enviada ao Shopify';}
+  }catch(err){
+    log('Erro: '+err.message,'er');
+    if(pz){pz.classList.remove('uploading');pz.querySelector('.pz-text').textContent='Erro — tente de novo';}
+  }
+}
+
+function fileToBase64(file){
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=()=>resolve(r.result);
+    r.onerror=reject;
+    r.readAsDataURL(file);
+  });
+}
+
 function card(it,res){
   const thumbUrl=it.drive_file_id?`/api/audit/thumb?id=${it.drive_file_id}&s=512&pwd=${encodeURIComponent(PWD)}`:'';
   const bigUrl=it.drive_file_id?`/api/audit/thumb?id=${it.drive_file_id}&s=1200&pwd=${encodeURIComponent(PWD)}`:'';
@@ -563,10 +636,12 @@ function card(it,res){
       <button class="ask" onclick="acao(${it.id},'PULAR')">Pular</button>
       <button class="anf" onclick="acao(${it.id},'SOLICITAR_NOVA_FOTO')" title="Nova foto">📷</button>
       <button class="arj" onclick="acao(${it.id},'REPROVAR')" title="Reprovar">✗</button>
-    </div>`;
+    </div>
+    ${pasteZone(it,linked||sel)}`;
   } else {
     const L={APROVADO:'✓ Aprovado',REPROVADO:'✗ Reprovado',PRECISA_DE_NOVA_FOTO:'↻ Nova foto',PRECISA_DE_AJUSTE:'✎ Ajuste'};
-    actH=`<div class="res-l">${L[it.status]||it.status}</div>`;
+    actH=`<div class="res-l">${L[it.status]||it.status}</div>
+    ${(it.status==='PRECISA_DE_NOVA_FOTO'||it.shopify_product_id)?pasteZone(it,it.shopify_product_id):''}`;
   }
 
   return `<div class="card${res?' res':''}" id="card-${it.id}">
