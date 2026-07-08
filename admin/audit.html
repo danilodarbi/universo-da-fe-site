@@ -214,6 +214,9 @@ main{padding:18px 20px;max-width:1400px;margin:0 auto}
 .paste-saved-ok{color:var(--ok-fg);font-size:12px;font-weight:600;flex:1}
 .paste-troca{padding:5px 10px;background:var(--surf2);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:border-color .15s}
 .paste-troca:hover{border-color:var(--gold-dim)}
+.gpt-row{display:flex;gap:5px;margin-bottom:7px}
+.gpt-btn{flex:1;padding:7px 8px;background:var(--surf2);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:border-color .15s}
+.gpt-btn:hover{border-color:var(--gold)}
 
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
@@ -472,6 +475,10 @@ async function salvarCampo(id, field, value, type){
 // ── Colar imagem (Ctrl+V) → Shopify ───────────────────────────────────────────
 function pasteZone(it, hasProduct){
   const pid = it.shopify_product_id || (SELS[it.id]?.product_id) || '';
+  const gptRow = `<div class="gpt-row">
+    <button class="gpt-btn" onclick="copiarPromptGPT(${it.id})" title="Copia o prompt pronto para o ChatGPT">📋 1. Copiar prompt</button>
+    <button class="gpt-btn" onclick="abrirOriginal(${it.id})" title="Abre a foto original em alta para anexar no ChatGPT">📷 2. Abrir foto original</button>
+  </div>`;
   if(it.imagem_enviada && !PZ_RESET[it.id]){
     return `<div class="paste-saved">
       <span class="paste-saved-ok">✓ Foto salva</span>
@@ -481,12 +488,40 @@ function pasteZone(it, hasProduct){
   }
   const destino = pid ? 'Envia ao Shopify' : 'Salva no sistema';
   return `<div class="paste-box">
-    <div class="paste-box-label">🖼️ ${it.imagem_enviada?'Trocar foto':'Nova foto'} (${destino})</div>
+    <div class="paste-box-label">🖼️ ${it.imagem_enviada?'Trocar foto':'Nova foto'} — fluxo ChatGPT</div>
+    ${gptRow}
     <div class="paste-target" id="pz-${it.id}" contenteditable="true"
       onpaste="handlePaste(event,${it.id},'${eq(pid)}')"
-      data-placeholder="Clique aqui e aperte Ctrl+V para colar a foto"></div>
-    <div style="font-size:10px;color:var(--muted);margin-top:4px">No ChatGPT: botão direito na imagem → Copiar imagem, depois cole aqui</div>
+      data-placeholder="3. Cole aqui a foto gerada (Ctrl+V)"></div>
   </div>`;
+}
+
+// Prompt de edição de foto, personalizado com os dados do produto
+function copiarPromptGPT(id){
+  // Busca dados do card na tela
+  const cardEl=document.getElementById('card-'+id);
+  const desc=cardEl?.querySelector('.desc-banner')?.textContent?.trim()||'';
+  const prompt=`Edit the attached photo. This is a real product photograph${desc?` of: ${desc}`:''}. Turn it into a professional e-commerce image. Follow these rules with zero deviation.
+
+ABSOLUTE RULE — DO NOT ALTER THE PRODUCT:
+Keep the devotional item 100% identical to the original — the exact same saint or religious figure, the exact same face, pose, colors, paint details, material, texture, proportions and shape. Do not repaint, redesign, beautify or "improve" the product. Do not swap the saint. Do not change gold to silver or any color. Only the background and lighting around it may change.
+
+WHAT TO CHANGE — ONLY BACKGROUND AND LIGHT:
+Replace the background with a clean, bright, airy scene: the product resting on a light warm-white marble or travertine surface, with soft eucalyptus or olive branches blurred in the background. Neutral cream, beige and ivory tones. Natural soft daylight from the side, gentle diffused shadows. Clean negative space around the product.
+
+REALISM — MUST LOOK LIKE A REAL PHOTO, NOT AI:
+Authentic photograph look, professional camera, 50mm lens. Natural grain, true textures, realistic soft shadows, accurate reflections. Keep original imperfections. No digital-art look, no plastic smoothness, no glow, no CGI feel. Shallow depth of field, product in sharp focus.
+
+FORMAT: square 1:1, high resolution, editorial product photography, calm reverent mood for a Catholic goods store. Output one photorealistic image.`;
+  navigator.clipboard.writeText(prompt).then(()=>{
+    log('Prompt copiado! Cole no ChatGPT junto com a foto original.','ok');
+  }).catch(()=>{
+    log('Não consegui copiar automaticamente — permita acesso à área de transferência','er');
+  });
+}
+
+function abrirOriginal(id){
+  window.open(`/api/audit/thumb?id_item=${id}&s=1600&pwd=${encodeURIComponent(PWD)}`,'_blank');
 }
 
 function trocarFoto(id){
@@ -510,12 +545,12 @@ async function handlePaste(ev, id, productId){
     return;
   }
 
-  if(pz){pz.classList.add('uploading');pz.textContent='Salvando…';}
+  if(pz){pz.classList.add('uploading');pz.textContent='Comprimindo e salvando…';}
 
   try{
-    const b64=await fileToBase64(imgFile);
+    const b64=await compressImage(imgFile); // comprime: 4MB → ~200KB, nunca dá TOOBIG
     const r=await api('upload-image',{method:'POST',body:JSON.stringify({
-      item_id:id, product_id:productId||null, image_base64:b64, filename:`produto-${id}.png`,
+      item_id:id, product_id:productId||null, image_base64:b64, filename:`produto-${id}.jpg`,
     })});
     if(r.error){
       log('Erro: '+r.error,'er');
@@ -548,6 +583,32 @@ function fileToBase64(file){
     r.onload=()=>resolve(r.result);
     r.onerror=reject;
     r.readAsDataURL(file);
+  });
+}
+
+// Comprime a imagem no navegador antes de enviar (resolve SQLITE_TOOBIG do D1).
+// Redimensiona para máx 1280px e converte para JPEG 85% — de ~4MB cai para ~200KB.
+function compressImage(file){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      URL.revokeObjectURL(url);
+      const MAX=1280;
+      let w=img.width,h=img.height;
+      if(w>MAX||h>MAX){
+        if(w>h){h=Math.round(h*MAX/w);w=MAX;}
+        else{w=Math.round(w*MAX/h);h=MAX;}
+      }
+      const canvas=document.createElement('canvas');
+      canvas.width=w;canvas.height=h;
+      const ctx=canvas.getContext('2d');
+      ctx.fillStyle='#ffffff';ctx.fillRect(0,0,w,h); // fundo branco (JPEG não tem transparência)
+      ctx.drawImage(img,0,0,w,h);
+      resolve(canvas.toDataURL('image/jpeg',0.85));
+    };
+    img.onerror=reject;
+    img.src=url;
   });
 }
 

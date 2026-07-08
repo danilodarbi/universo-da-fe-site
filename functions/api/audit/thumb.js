@@ -16,13 +16,21 @@ export async function onRequest(context) {
   }
 
   const url = new URL(request.url);
-  const fileId = url.searchParams.get('id');
+  let fileId = url.searchParams.get('id');
+  const itemId = url.searchParams.get('id_item');
   const size = url.searchParams.get('s') || '512';
-  if (!fileId) return new Response('missing id', { status: 400 });
+  if (!fileId && !itemId) return new Response('missing id', { status: 400 });
 
   // Auth leve: aceita senha via query (imagens não mandam header)
   const pwd = url.searchParams.get('pwd') || request.headers.get('X-Admin-Password');
   if (pwd !== env.ADMIN_PASSWORD) return new Response('unauthorized', { status: 401 });
+
+  // Se veio id_item, resolve o drive_file_id no banco
+  if (!fileId && itemId) {
+    const row = await env.DB.prepare(`SELECT drive_file_id FROM audit_records WHERE id = ?`).bind(itemId).first();
+    if (!row?.drive_file_id) return new Response('item sem arquivo', { status: 404 });
+    fileId = row.drive_file_id;
+  }
 
   try {
     const token = await getDriveAccessToken(env);
