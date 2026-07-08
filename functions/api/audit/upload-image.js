@@ -51,13 +51,24 @@ export async function onRequest(context) {
   const { item_id, product_id, image_base64, filename } = body;
 
   if (!image_base64) return jsonResponse({ error: 'sem imagem' }, 400);
-  if (!product_id)   return jsonResponse({ error: 'sem product_id — vincule um produto antes' }, 400);
+  if (!item_id)      return jsonResponse({ error: 'sem item_id' }, 400);
 
   try {
     const bytes = base64ToBytes(image_base64);
-    const fname = filename || `produto-${Date.now()}.png`;
+    const fname = filename || `produto-${item_id}.png`;
     const mime = image_base64.startsWith('data:image/jpeg') ? 'image/jpeg' : 'image/png';
 
+    // Sempre salva a imagem no D1 (base64) para uso posterior
+    await env.DB.prepare(
+      `UPDATE audit_records SET imagem_editada_base64 = ?, imagem_enviada = 1, updated_at = datetime('now') WHERE id = ?`
+    ).bind(image_base64, item_id).run();
+
+    // Se NÃO houver produto vinculado, para por aqui — imagem guardada no sistema
+    if (!product_id) {
+      return jsonResponse({ ok: true, msg: 'Imagem salva no sistema. Vincule um produto depois para enviar ao Shopify.', shopify: false });
+    }
+
+    // Com produto: sobe também para o Shopify
     // 1. stagedUploadsCreate — pede uma URL de upload temporária
     const stagedQuery = `
       mutation stagedUploadsCreate($input: [StagedUploadInput!]!) {
@@ -113,14 +124,7 @@ export async function onRequest(context) {
     const mediaErrors = mediaRes?.data?.productCreateMedia?.mediaUserErrors;
     if (mediaErrors?.length) throw new Error('media: ' + mediaErrors[0].message);
 
-    // Marca o item como imagem enviada, se item_id vier
-    if (item_id) {
-      await env.DB.prepare(
-        `UPDATE audit_records SET imagem_enviada = 1, updated_at = datetime('now') WHERE id = ?`
-      ).bind(item_id).run().catch(() => {});
-    }
-
-    return jsonResponse({ ok: true, msg: 'Imagem anexada ao produto no Shopify.' });
+    return jsonResponse({ ok: true, msg: 'Imagem salva e enviada ao Shopify.', shopify: true });
   } catch (e) {
     return jsonResponse({ error: e.message }, 500);
   }

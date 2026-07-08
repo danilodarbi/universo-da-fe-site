@@ -462,55 +462,19 @@ async function salvarCampo(id, field, value, type){
 function pasteZone(it, hasProduct){
   const pid = it.shopify_product_id || (SELS[it.id]?.product_id) || '';
   if(it.imagem_enviada){
-    return `<div class="paste-zone done">✓ Foto enviada ao Shopify</div>`;
+    return `<div class="paste-zone done" onclick="verFotoEnviada(${it.id})" style="cursor:pointer">✓ Foto enviada${pid?' ao Shopify':''} — clique para ver</div>`;
   }
-  if(!pid){
-    // Sem produto vinculado — oferece busca rápida inline
-    return `<div class="paste-link-prompt">
-      <span style="font-size:11px;color:var(--muted)">Para enviar a foto, vincule um produto:</span>
-      <input class="es-inp" id="pzsearch-${it.id}" placeholder="Buscar produto Shopify..." oninput="srchPaste(${it.id},this.value)" style="margin-top:5px"/>
-      <div class="er-list" id="pzresults-${it.id}"></div>
-    </div>`;
-  }
+  const destino = pid ? 'e envia ao Shopify' : '(salva no sistema)';
   return `<div class="paste-zone" id="pz-${it.id}" tabindex="0"
     onclick="focusPaste(${it.id})"
     onpaste="handlePaste(event,${it.id},'${eq(pid)}')">
     <span class="pz-icon">🖼️</span>
-    <span class="pz-text">Clique aqui e cole a foto (Ctrl+V)</span>
+    <span class="pz-text">Cole a foto aqui (Ctrl+V) ${destino}</span>
   </div>`;
 }
 
-// Busca produto direto na zona de colar (quando item precisa de foto mas não tem vínculo)
-let PZ_ST={};
-async function srchPaste(id,q){
-  clearTimeout(PZ_ST[id]);
-  const rl=document.getElementById('pzresults-'+id);
-  if(!rl)return;
-  if(!q.trim()){rl.innerHTML='';return;}
-  rl.innerHTML='<div class="er-hint">Buscando…</div>';
-  PZ_ST[id]=setTimeout(async()=>{
-    try{
-      const r=await api('search-products?q='+encodeURIComponent(q.trim()));
-      const ps=r.products||[];
-      if(!ps.length){rl.innerHTML='<div class="er-hint">Nenhum resultado.</div>';return;}
-      rl.innerHTML=ps.map(p=>`<button class="er-btn" onclick="vincularParaFoto(${id},'${eq(p.product_id)}','${eq(p.title)}')">
-        ${e(p.title)}<span style="color:var(--muted);font-size:10px;margin-left:5px">${e(p.product_type||'')}</span>
-      </button>`).join('');
-    }catch(err){rl.innerHTML='<div class="er-hint">Erro</div>';}
-  },350);
-}
-
-async function vincularParaFoto(id,pid,title){
-  // Vincula o produto e re-renderiza pra mostrar a zona de colar
-  try{
-    await api('review-action',{method:'POST',body:JSON.stringify({
-      item_id:id,action:'CORRIGIR',
-      fields:{shopify_product_id:pid,produto_identificado:title,confianca_correspondencia:1.0,status_correspondencia:'VINCULADO_MANUALMENTE'}
-    })});
-    SELS[id]={product_id:pid,title};
-    log(`Vinculado: "${title}" — agora cole a foto`,'ok');
-    await refreshCard(id);
-  }catch(err){log('Erro: '+err.message,'er');}
+function verFotoEnviada(id){
+  window.open(`/api/audit/get-image?id=${id}&pwd=${encodeURIComponent(PWD)}`,'_blank');
 }
 
 function focusPaste(id){
@@ -529,24 +493,35 @@ async function handlePaste(ev, id, productId){
   if(!imgFile){log('A área de transferência não tem imagem — copie a foto no ChatGPT primeiro','er');return;}
 
   const pz=document.getElementById('pz-'+id);
-  if(pz){pz.classList.add('uploading');pz.querySelector('.pz-text').textContent='Enviando ao Shopify…';}
+  if(pz){pz.classList.add('uploading');const t=pz.querySelector('.pz-text');if(t)t.textContent='Salvando…';}
 
   try{
     const b64=await fileToBase64(imgFile);
     const r=await api('upload-image',{method:'POST',body:JSON.stringify({
-      item_id:id, product_id:productId, image_base64:b64,
+      item_id:id, product_id:productId||null, image_base64:b64,
       filename:`produto-${id}.png`,
     })});
     if(r.error){
-      log('Erro upload: '+r.error,'er');
-      if(pz){pz.classList.remove('uploading');pz.querySelector('.pz-text').textContent='Erro — tente colar de novo';}
+      log('Erro: '+r.error,'er');
+      if(pz){pz.classList.remove('uploading');const t=pz.querySelector('.pz-text');if(t)t.textContent='Erro — cole de novo';}
       return;
     }
-    log(`Item ${id}: foto enviada ao Shopify ✓`,'ok');
-    if(pz){pz.classList.remove('uploading');pz.classList.add('done');pz.innerHTML='✓ Foto enviada ao Shopify';}
+    log(`Item ${id}: ${r.msg}`,'ok');
+    // Mostra a imagem colada no lugar da zona + na foto do card
+    if(pz){
+      pz.classList.remove('uploading');
+      pz.classList.add('done');
+      pz.style.cursor='pointer';
+      pz.innerHTML=`✓ Foto salva${r.shopify?' e enviada ao Shopify':''} — clique para ver`;
+      pz.onclick=()=>window.open(URL.createObjectURL(imgFile),'_blank');
+    }
+    // Atualiza a imagem principal do card com a foto nova
+    const cardEl=document.getElementById('card-'+id);
+    const imgEl=cardEl?.querySelector('.ci');
+    if(imgEl){imgEl.src=URL.createObjectURL(imgFile);imgEl.style.display='block';}
   }catch(err){
     log('Erro: '+err.message,'er');
-    if(pz){pz.classList.remove('uploading');pz.querySelector('.pz-text').textContent='Erro — tente de novo';}
+    if(pz){pz.classList.remove('uploading');const t=pz.querySelector('.pz-text');if(t)t.textContent='Erro — cole de novo';}
   }
 }
 
