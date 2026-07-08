@@ -59,14 +59,23 @@ export async function onRequest(context) {
 
     if (!generatedB64) throw new Error('IA não retornou imagem');
 
-    const dataUrl = `data:image/png;base64,${generatedB64}`;
+    // Comprime a imagem gerada para caber no D1 (limite ~2MB por valor).
+    // A OpenAI retorna PNG grande (1-4MB) — reduzimos via redimensionamento
+    // simples de qualidade não é possível sem canvas no worker, então
+    // guardamos como está mas validamos o tamanho com margem segura.
+    let dataUrl = `data:image/png;base64,${generatedB64}`;
 
-    // Verifica tamanho — se >1.5MB, é grande demais pro D1; nesse caso guarda aviso
-    if (dataUrl.length > 1_500_000) {
-      // Ainda salva mas em JPEG seria menor — por segurança, corta se absurdo
-      if (dataUrl.length > 1_900_000) {
-        throw new Error('Imagem gerada muito grande — tente novamente');
-      }
+    // Se a imagem for grande demais, o frontend vai comprimir no próximo passo.
+    // Aqui salvamos direto; se exceder 1.8MB avisamos para regenerar menor.
+    if (dataUrl.length > 1_800_000) {
+      // Retorna a imagem para o frontend comprimir e reenviar
+      return jsonResponse({
+        ok: true,
+        provider,
+        needs_compression: true,
+        image_base64: dataUrl,
+        msg: 'Foto gerada — comprimindo…',
+      });
     }
 
     await env.DB.prepare(
