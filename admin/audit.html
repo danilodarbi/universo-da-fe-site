@@ -226,6 +226,28 @@ main{padding:18px 20px;max-width:1400px;margin:0 auto}
 #toast.toast-show{transform:translateX(-50%) translateY(0)}
 #toast.toast-ok{border-color:#2e5c3a;color:var(--ok-fg);background:#0d1f13}
 #toast.toast-er{border-color:var(--err);color:var(--err-fg);background:#1f0d0d}
+
+/* Abas de foto no card */
+.foto-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);background:#0a0c12}
+.ftab{flex:1;padding:7px 6px;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:11px;font-weight:600;border-bottom:2px solid transparent;transition:color .15s;font-family:'Inter',sans-serif}
+.ftab:hover{color:var(--text)}
+.ftab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.ftab-cmp{flex:0 0 auto;padding:7px 12px;color:var(--blue)}
+.ftab-cmp:hover{color:#5b9bf6}
+
+/* Modal de comparação */
+#cmp-modal{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center}
+.cmp-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.85);cursor:pointer}
+.cmp-content{position:relative;background:var(--surf);border:1px solid var(--border);border-radius:14px;width:min(1200px,94vw);max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
+.cmp-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--gold)}
+.cmp-close{padding:6px 14px;background:var(--surf2);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;font-weight:600}
+.cmp-close:hover{border-color:var(--err-fg);color:var(--err-fg)}
+.cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);flex:1;overflow:auto}
+.cmp-side{background:var(--bg);padding:16px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.cmp-label{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.cmp-label-nova{color:var(--ok-fg)}
+.cmp-side img{max-width:100%;max-height:70vh;object-fit:contain;border-radius:8px}
+@media(max-width:700px){.cmp-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -588,20 +610,10 @@ async function handlePaste(ev, id, productId){
       if(pz){pz.classList.remove('uploading');pz.textContent='Erro — cole de novo';}
       return;
     }
-    log(`Foto salva${r.shopify?' e enviada ao Shopify':''} ✓`,'ok');
-    PZ_RESET[id]=false; // volta ao estado 'salva' com botão de trocar
-    // Mostra a imagem no card
-    const objUrl=URL.createObjectURL(imgFile);
-    const cardEl=document.getElementById('card-'+id);
-    const imgEl=cardEl?.querySelector('.ci');
-    if(imgEl){imgEl.src=objUrl;imgEl.style.display='block';}
-    // Substitui a box por confirmação + botão trocar
-    const box=pz?.closest('.paste-box');
-    if(box)box.innerHTML=`<div class="paste-saved">
-      <span class="paste-saved-ok">✓ Foto salva</span>
-      <button class="paste-troca" onclick="window.open('${objUrl}','_blank')">👁 Ver</button>
-      <button class="paste-troca" onclick="trocarFoto(${id})">🔄 Trocar foto</button>
-    </div>`;
+    log(`Foto salva${r.shopify?' e enviada ao Shopify':''} ✓ — use as abas Original/Nova para comparar`,'ok');
+    PZ_RESET[id]=false;
+    // Re-renderiza o card para mostrar as abas Original / Nova / Comparar
+    await refreshCard(id);
   }catch(err){
     log('Erro: '+err.message,'er');
     if(pz){pz.classList.remove('uploading');pz.textContent='Erro — cole de novo';}
@@ -646,9 +658,18 @@ function compressImage(file){
 function card(it,res){
   const thumbUrl=it.drive_file_id?`/api/audit/thumb?id=${it.drive_file_id}&s=512&pwd=${encodeURIComponent(PWD)}`:'';
   const bigUrl=it.drive_file_id?`/api/audit/thumb?id=${it.drive_file_id}&s=1200&pwd=${encodeURIComponent(PWD)}`:'';
-  const img=thumbUrl
-    ?`<img class="ci" src="${e(thumbUrl)}" onerror="this.parentElement.querySelector('.ci-ph-fallback')?.style.setProperty('display','flex');this.style.display='none'" loading="lazy" onclick="window.open('${e(bigUrl)}','_blank')"/><div class="ci-ph ci-ph-fallback" style="display:none">HEIC sem preview</div>`
+  const novaUrl=it.imagem_enviada?`/api/audit/get-image?id=${it.id}&pwd=${encodeURIComponent(PWD)}`:'';
+  // Se tem foto nova, mostra ela por padrão; senão a original
+  const mainSrc=novaUrl||thumbUrl;
+  const img=mainSrc
+    ?`<img class="ci" id="ci-${it.id}" src="${e(mainSrc)}" onerror="this.parentElement.querySelector('.ci-ph-fallback')?.style.setProperty('display','flex');this.style.display='none'" loading="lazy" onclick="window.open(this.src.replace('s=512','s=1200'),'_blank')"/><div class="ci-ph ci-ph-fallback" style="display:none">sem preview</div>`
     :`<div class="ci-ph">sem imagem</div>`;
+  // Abas de foto: só quando existe foto nova (para comparar com a original)
+  const fotoTabs=novaUrl&&thumbUrl?`<div class="foto-tabs">
+    <button class="ftab" onclick="verFoto(${it.id},'${e(thumbUrl)}',this)">Original</button>
+    <button class="ftab active" onclick="verFoto(${it.id},'${e(novaUrl)}',this)">Nova ✓</button>
+    <button class="ftab ftab-cmp" onclick="compararFotos('${e(bigUrl)}','${e(novaUrl)}')" title="Ver as duas lado a lado">⇄ Comparar</button>
+  </div>`:'';
 
   const hasAI=!!(it.produto_identificado||it.categoria||it.santo_devocao);
   const descH=it.produto_identificado
@@ -794,12 +815,51 @@ function card(it,res){
 
   return `<div class="card${res?' res':''}" id="card-${it.id}">
     ${img}
+    ${fotoTabs}
     <div class="cb">
       <div class="cm"><span class="fn" title="${e(it.file_name)}">${e(it.file_name)}</span>
         <span class="badge st-${it.status}">${it.status.replace(/_/g,' ')}</span></div>
       ${descH}${atributosH}${alertasH}${bfg}${shopSug}${errH}${candsH}${edH}${actH}
     </div>
   </div>`;
+}
+
+// ── Fotos: alternar e comparar ────────────────────────────────────────────────
+function verFoto(id, src, btn){
+  const img=document.getElementById('ci-'+id);
+  if(img){img.src=src;img.style.display='block';}
+  btn.parentElement.querySelectorAll('.ftab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function compararFotos(urlOriginal, urlNova){
+  // Modal com as duas fotos lado a lado
+  let modal=document.getElementById('cmp-modal');
+  if(modal)modal.remove();
+  modal=document.createElement('div');
+  modal.id='cmp-modal';
+  modal.innerHTML=`
+    <div class="cmp-backdrop" onclick="document.getElementById('cmp-modal').remove()"></div>
+    <div class="cmp-content">
+      <div class="cmp-header">
+        <span>⇄ Comparação — Original vs Nova</span>
+        <button class="cmp-close" onclick="document.getElementById('cmp-modal').remove()">✕ Fechar</button>
+      </div>
+      <div class="cmp-grid">
+        <div class="cmp-side">
+          <div class="cmp-label">📷 Original</div>
+          <img src="${urlOriginal}" alt="Original"/>
+        </div>
+        <div class="cmp-side">
+          <div class="cmp-label cmp-label-nova">✨ Nova (gerada)</div>
+          <img src="${urlNova}" alt="Nova"/>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  // ESC fecha
+  const esc=(ev)=>{if(ev.key==='Escape'){modal.remove();document.removeEventListener('keydown',esc);}};
+  document.addEventListener('keydown',esc);
 }
 
 // ── Sync ──────────────────────────────────────────────────────────────────────
