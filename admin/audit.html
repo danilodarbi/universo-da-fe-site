@@ -210,6 +210,10 @@ main{padding:18px 20px;max-width:1400px;margin:0 auto}
 .paste-target.uploading{border-color:var(--gold);background:#1a1500}
 .paste-target img{max-width:100%;border-radius:4px}
 .paste-zone.done{margin-top:8px;padding:12px;border:2px solid #2e5c3a;border-radius:8px;background:#14261a;color:var(--ok-fg);font-size:12px;font-weight:600;text-align:center;cursor:pointer}
+.paste-saved{margin-top:8px;padding:9px 11px;border:1px solid #2e5c3a;border-radius:8px;background:#14261a;display:flex;align-items:center;gap:8px}
+.paste-saved-ok{color:var(--ok-fg);font-size:12px;font-weight:600;flex:1}
+.paste-troca{padding:5px 10px;background:var(--surf2);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:border-color .15s}
+.paste-troca:hover{border-color:var(--gold-dim)}
 
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
@@ -265,7 +269,7 @@ main{padding:18px 20px;max-width:1400px;margin:0 auto}
 
 <script>
 let PWD='', batchId=null, busy=false, activeTab='revisao';
-const SELS={}, ESELS={}, EOPEN={}, PENDING_FIELDS={};
+const SELS={}, ESELS={}, EOPEN={}, PENDING_FIELDS={}, PZ_RESET={};
 let tabOffset={};
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -468,17 +472,26 @@ async function salvarCampo(id, field, value, type){
 // ── Colar imagem (Ctrl+V) → Shopify ───────────────────────────────────────────
 function pasteZone(it, hasProduct){
   const pid = it.shopify_product_id || (SELS[it.id]?.product_id) || '';
-  if(it.imagem_enviada){
-    return `<div class="paste-zone done" onclick="window.open('/api/audit/get-image?id=${it.id}&pwd=${encodeURIComponent(PWD)}','_blank')" style="cursor:pointer">✓ Foto salva — clique para ver</div>`;
+  if(it.imagem_enviada && !PZ_RESET[it.id]){
+    return `<div class="paste-saved">
+      <span class="paste-saved-ok">✓ Foto salva</span>
+      <button class="paste-troca" onclick="window.open('/api/audit/get-image?id=${it.id}&pwd=${encodeURIComponent(PWD)}','_blank')">👁 Ver</button>
+      <button class="paste-troca" onclick="trocarFoto(${it.id})">🔄 Trocar foto</button>
+    </div>`;
   }
   const destino = pid ? 'Envia ao Shopify' : 'Salva no sistema';
   return `<div class="paste-box">
-    <div class="paste-box-label">🖼️ Nova foto (${destino})</div>
+    <div class="paste-box-label">🖼️ ${it.imagem_enviada?'Trocar foto':'Nova foto'} (${destino})</div>
     <div class="paste-target" id="pz-${it.id}" contenteditable="true"
       onpaste="handlePaste(event,${it.id},'${eq(pid)}')"
       data-placeholder="Clique aqui e aperte Ctrl+V para colar a foto"></div>
-    <div style="font-size:10px;color:var(--muted);margin-top:4px">Copie a imagem no ChatGPT (botão direito → Copiar imagem) e cole aqui</div>
+    <div style="font-size:10px;color:var(--muted);margin-top:4px">No ChatGPT: botão direito na imagem → Copiar imagem, depois cole aqui</div>
   </div>`;
+}
+
+function trocarFoto(id){
+  PZ_RESET[id]=true;
+  refreshCard(id);
 }
 
 async function handlePaste(ev, id, productId){
@@ -510,14 +523,19 @@ async function handlePaste(ev, id, productId){
       return;
     }
     log(`Foto salva${r.shopify?' e enviada ao Shopify':''} ✓`,'ok');
+    PZ_RESET[id]=false; // volta ao estado 'salva' com botão de trocar
     // Mostra a imagem no card
     const objUrl=URL.createObjectURL(imgFile);
     const cardEl=document.getElementById('card-'+id);
     const imgEl=cardEl?.querySelector('.ci');
     if(imgEl){imgEl.src=objUrl;imgEl.style.display='block';}
-    // Substitui a box por confirmação
+    // Substitui a box por confirmação + botão trocar
     const box=pz?.closest('.paste-box');
-    if(box)box.innerHTML=`<div class="paste-zone done" onclick="window.open('${objUrl}','_blank')" style="cursor:pointer">✓ Foto salva — clique para ver</div>`;
+    if(box)box.innerHTML=`<div class="paste-saved">
+      <span class="paste-saved-ok">✓ Foto salva</span>
+      <button class="paste-troca" onclick="window.open('${objUrl}','_blank')">👁 Ver</button>
+      <button class="paste-troca" onclick="trocarFoto(${id})">🔄 Trocar foto</button>
+    </div>`;
   }catch(err){
     log('Erro: '+err.message,'er');
     if(pz){pz.classList.remove('uploading');pz.textContent='Erro — cole de novo';}
