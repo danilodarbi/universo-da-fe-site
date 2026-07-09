@@ -30,9 +30,10 @@ const EDITABLE = [
 const HARD_BLOCKS_ON_APROVAR = (item) => {
   const conflitos = safeParse(item.conflitos_json);
   if (conflitos.length > 0) return 'conflito não resolvido';
-  // Permite aprovação se produto foi vinculado manualmente (shopify_product_id) mesmo sem descrição IA
+  // Único bloqueio real: item sem NENHUMA identificação (nem IA, nem manual, nem vínculo)
   if (!item.produto_identificado && !item.shopify_product_id) return 'produto não identificado — vincule um produto Shopify ou use Editar';
-  if ((item.confianca_correspondencia ?? 0) < 0.6) return 'confiança de correspondência baixa — vincule um produto Shopify';
+  // Confiança baixa do match automático NÃO bloqueia: o usuário clicando
+  // aprovar É a revisão humana — a decisão dele vale mais que o score da IA.
   return null;
 };
 

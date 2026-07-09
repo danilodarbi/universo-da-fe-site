@@ -6,28 +6,34 @@
 
 import { jsonResponse, corsPreflight, requireAuth, fetchThumbnailAsBase64 } from './_shared.js';
 
-const PROMPT = `Professional product photography edit. The attached photo shows a real Catholic devotional product sold by a store. Recreate it as a premium e-commerce photo, exactly in the style of the brand "House of Joppa": bright, airy, serene, editorial.
+const PROMPT = `Professional product photography edit. The attached photo shows a real Catholic devotional product sold by a store. Recreate it as a premium e-commerce photo in the style of the brand "House of Joppa": bright, airy, serene, editorial.
 
 THE PRODUCT IS SACRED — REPRODUCE IT EXACTLY:
-Reproduce the product with complete fidelity: same saint/figure, same face and expression, same colors, same metal tone (silver stays silver, gold stays gold), same bead count and bead color, same crucifix design, same medal engravings, same proportions, same size relationships between parts. Zero creative liberty on the product itself.
+Reproduce the product with complete fidelity: same saint/figure, same face and expression, same colors, same metal tone (silver stays silver, gold stays gold), same bead count and bead color and bead size, same crucifix design, same medal engravings, same cord/chain type, same proportions. Zero creative liberty on the product itself.
+
+FRAMING — SHOW THE ENTIRE PRODUCT, NEVER CROP IT:
+The COMPLETE product must be visible inside the frame, from end to end — the full chain/cord, every bead, the whole crucifix, the entire statue from base to top. Leave a comfortable margin of empty background around all sides of the product (at least 10% of the frame on every side). Do NOT zoom in so much that any part gets cut off. Do NOT let the crucifix, medal, cord ends or statue base touch or exit the frame edges.
+
+SCALE AND PROPORTIONS — KEEP THEM REAL:
+Preserve the true real-world size relationships: bead diameter vs crucifix length vs medal size vs chain thickness must match the reference photo exactly. Do not enlarge the crucifix, do not shrink the beads, do not stretch or compress the product. A small delicate item must still look small and delicate; a large statue must look substantial. The product occupies a natural, realistic amount of the frame — centered, with breathing room.
 
 CLEAN THE PRODUCT (remove everything that is not the product):
-- Remove plastic bags, shrink wrap, blisters, packaging cards and backing cards completely
+- Remove plastic bags, shrink wrap, blisters, backing cards and packaging completely
 - Remove price tags, stickers, barcodes, handwritten labels
 - Remove pins, clips, hands, boxes and any clutter
-- Show the bare product alone, as if professionally unwrapped and styled
+- Show the bare product alone, professionally unwrapped and styled
 
 SCENE (House of Joppa signature look):
 - Surface: light warm-white marble or creamy travertine stone with subtle natural veining
-- Props: a few sprigs of eucalyptus or olive branches at the edges of the frame, softly out of focus — they frame the product, never cover it
-- Palette: warm white, cream, ivory, soft beige — bright and luminous overall
+- Props: a few sprigs of eucalyptus or olive branches at the far edges of the frame, softly out of focus — they never touch or cover the product
+- Palette: warm white, cream, ivory, soft beige — bright and luminous
 - Light: soft natural window daylight from one side, delicate elongated shadows, gentle highlights on metal and beads
-- Composition: product laid flat (flat lay, top-down) for rosaries/chaplets/scapulars, or standing at slight angle for statues; generous negative space; product perfectly centered as the hero
+- Composition: flat lay (top-down) for rosaries/chaplets/scapulars/bracelets laid out fully extended and untangled; standing at slight angle for statues; generous negative space; product centered as the hero
 
 PHOTOREALISM (critical — must NOT look AI-generated):
-Looks like a photo from a professional product photographer with a full-frame camera and 50mm macro lens. Fine natural film grain, true material textures (pearl sheen, metal patina, wood grain), physically-accurate soft shadows and reflections, slight natural imperfections preserved. Absolutely no digital-art smoothness, no HDR glow, no oversaturation, no plastic skin, no painterly strokes, no CGI rendering feel.
+Looks like a photo from a professional product photographer with a full-frame camera and 50mm macro lens. Fine natural film grain, true material textures (pearl sheen, metal patina, wood grain), physically-accurate soft shadows and reflections, slight natural imperfections preserved. No digital-art smoothness, no HDR glow, no oversaturation, no plastic look, no painterly strokes, no CGI feel.
 
-OUTPUT: one square high-resolution photorealistic image of the exact same product, cleaned and beautifully staged.`;
+OUTPUT: one square high-resolution photorealistic image of the exact same product, complete and uncropped, cleaned and beautifully staged.`;
 
 export async function onRequest(context) {
   const { request, env } = context;
