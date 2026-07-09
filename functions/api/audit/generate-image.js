@@ -48,8 +48,9 @@ export async function onRequest(context) {
   if (!item.thumbnail_link && !item.drive_file_id) return jsonResponse({ error: 'item sem foto original' }, 400);
 
   try {
-    // Foto original em boa resolução
-    const originalB64 = await fetchThumbnailAsBase64(env, item.thumbnail_link, item.drive_file_id);
+    // Foto original em ALTA resolução (1600px) — input de qualidade é o que
+    // define a fidelidade do resultado. Antes era 768px, por isso saía artificial.
+    const originalB64 = await fetchThumbnailAsBase64(env, item.thumbnail_link, item.drive_file_id, 1600);
 
     let generatedB64 = null;
     let provider = null;

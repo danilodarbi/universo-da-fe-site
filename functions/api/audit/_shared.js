@@ -156,13 +156,13 @@ export async function driveListFolder(env, folderId, pageToken) {
 // Estratégia robusta para HEIC e outros formatos:
 // 1. Tenta o thumbnailLink SEM header de auth (o link já vem assinado)
 // 2. Se falhar, usa o endpoint de thumbnail da API Drive com auth (converte p/ JPEG)
-export async function fetchThumbnailAsBase64(env, thumbnailLink, driveFileId) {
+export async function fetchThumbnailAsBase64(env, thumbnailLink, driveFileId, size = 768) {
   let buf = null;
 
   // Tentativa 1: thumbnailLink direto em alta resolução (já vem assinado, NÃO usar Bearer)
   if (thumbnailLink) {
     try {
-      const url = thumbnailLink.replace(/=s\d+$/, '=s768');
+      const url = thumbnailLink.replace(/=s\d+$/, '=s' + size);
       const res = await fetch(url);
       if (res.ok) buf = await res.arrayBuffer();
     } catch { /* tenta próxima */ }
@@ -176,7 +176,7 @@ export async function fetchThumbnailAsBase64(env, thumbnailLink, driveFileId) {
     if (metaRes.ok) {
       const meta = await metaRes.json();
       if (meta.thumbnailLink) {
-        const url = meta.thumbnailLink.replace(/=s\d+$/, '=s768');
+        const url = meta.thumbnailLink.replace(/=s\d+$/, '=s' + size);
         const res = await fetch(url);
         if (res.ok) buf = await res.arrayBuffer();
       }
