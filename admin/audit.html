@@ -786,10 +786,10 @@ function card(it,res){
     ?`<img class="ci" id="ci-${it.id}" src="${e(mainSrc)}" onerror="this.parentElement.querySelector('.ci-ph-fallback')?.style.setProperty('display','flex');this.style.display='none'" loading="lazy" onclick="window.open(this.src.replace('s=512','s=1200'),'_blank')"/><div class="ci-ph ci-ph-fallback" style="display:none">sem preview</div>`
     :`<div class="ci-ph">sem imagem</div>`;
   // Abas de foto: só quando existe foto nova (para comparar com a original)
-  const fotoTabs=novaUrl&&thumbUrl?`<div class="foto-tabs">
-    <button class="ftab" onclick="verFoto(${it.id},'${e(thumbUrl)}',this)">Original</button>
-    <button class="ftab active" onclick="verFoto(${it.id},'${e(novaUrl)}',this)">Nova ✓</button>
-    <button class="ftab ftab-cmp" onclick="compararFotos('${e(bigUrl)}','${e(novaUrl)}')" title="Ver as duas lado a lado">⇄ Comparar</button>
+  const fotoTabs=novaUrl&&thumbUrl?`<div class="foto-tabs" id="ftabs-${it.id}" data-orig="${e(thumbUrl)}" data-big="${e(bigUrl)}" data-nova="${e(novaUrl)}">
+    <button class="ftab" onclick="verFoto(${it.id},'orig',this)">Original</button>
+    <button class="ftab active" onclick="verFoto(${it.id},'nova',this)">Nova ✓</button>
+    <button class="ftab ftab-cmp" onclick="compararFotos(${it.id})" title="Ver as duas lado a lado">⇄ Comparar</button>
   </div>`:'';
 
   const hasAI=!!(it.produto_identificado||it.categoria||it.santo_devocao);
@@ -951,15 +951,26 @@ function card(it,res){
 }
 
 // ── Fotos: alternar e comparar ────────────────────────────────────────────────
-function verFoto(id, src, btn){
+function verFoto(id, which, btn){
+  const tabs=document.getElementById('ftabs-'+id);
   const img=document.getElementById('ci-'+id);
-  if(img){img.src=src;img.style.display='block';}
-  btn.parentElement.querySelectorAll('.ftab').forEach(b=>b.classList.remove('active'));
+  if(!tabs||!img)return;
+  const base=which==='orig'?tabs.dataset.orig:tabs.dataset.nova;
+  // Cache-buster: força o navegador a buscar a imagem certa, nunca a cacheada
+  img.src=base+(base.includes('?')?'&':'?')+'cb='+Date.now();
+  img.style.display='block';
+  const fb=img.parentElement?.querySelector('.ci-ph-fallback');
+  if(fb)fb.style.display='none';
+  tabs.querySelectorAll('.ftab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
 }
 
-function compararFotos(urlOriginal, urlNova){
-  // Modal com as duas fotos lado a lado
+function compararFotos(id){
+  const tabs=document.getElementById('ftabs-'+id);
+  if(!tabs)return;
+  const cb='cb='+Date.now();
+  const urlOriginal=(tabs.dataset.big||tabs.dataset.orig)+((tabs.dataset.big||tabs.dataset.orig).includes('?')?'&':'?')+cb;
+  const urlNova=tabs.dataset.nova+(tabs.dataset.nova.includes('?')?'&':'?')+cb;
   let modal=document.getElementById('cmp-modal');
   if(modal)modal.remove();
   modal=document.createElement('div');
@@ -983,7 +994,6 @@ function compararFotos(urlOriginal, urlNova){
       </div>
     </div>`;
   document.body.appendChild(modal);
-  // ESC fecha
   const esc=(ev)=>{if(ev.key==='Escape'){modal.remove();document.removeEventListener('keydown',esc);}};
   document.addEventListener('keydown',esc);
 }
