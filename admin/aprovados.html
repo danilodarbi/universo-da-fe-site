@@ -2,14 +2,14 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8"/>
-<title>Produtos Aprovados — Universo da Fé</title>
+<title>Produtos — Universo da Fé</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=IBM+Plex+Mono:wght@400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --gold:#c9a84c;--gold-dim:#7a6128;--bg:#0d0f14;--surf:#161923;--surf2:#1e2330;
-  --border:#252b3b;--text:#d8dde8;--muted:#6b7591;--ok:#1f6b3a;--ok-fg:#4ade80;
+  --border:#252b3b;--text:#d8dde8;--muted:#6b7591;--ok:#1f6b3a;--ok-fg:#4ade80;--blue:#3b82f6;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px}
@@ -27,33 +27,50 @@ header{background:var(--surf);border-bottom:1px solid var(--border);padding:0 20
 .hb h1{font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--gold);font-weight:600}
 .hl{color:var(--muted);font-size:12px;text-decoration:none;margin-left:14px}
 .hl:hover{color:var(--text)}
-.toolbar{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--surf);position:sticky;top:52px;z-index:99}
-.search{flex:1;max-width:420px;padding:9px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none}
+.toolbar{padding:12px 20px;border-bottom:1px solid var(--border);background:var(--surf);position:sticky;top:52px;z-index:99;display:flex;flex-direction:column;gap:10px}
+.tb-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.search{flex:1;min-width:220px;max-width:420px;padding:9px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none}
 .search:focus{border-color:var(--gold)}
 .count{font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace}
-main{padding:18px 20px;max-width:1400px;margin:0 auto}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.lens-btn{padding:9px 14px;background:var(--surf2);border:1px solid var(--blue);border-radius:8px;color:var(--blue);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.lens-btn:hover{background:#1a3a5c}
+.chips-row{display:flex;gap:6px;flex-wrap:wrap}
+.fchip{padding:5px 12px;background:var(--surf2);border:1px solid var(--border);border-radius:100px;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+.fchip:hover{border-color:var(--gold-dim)}
+.fchip.active{background:#2a2000;border-color:var(--gold);color:var(--gold)}
+main{padding:18px 20px;max-width:1500px;margin:0 auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
 .card{background:var(--surf);border:1px solid var(--border);border-radius:11px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .2s}
 .card:hover{border-color:var(--gold-dim)}
+.ci-wrap{position:relative}
 .ci{width:100%;height:200px;object-fit:contain;background:#070910;display:block;cursor:zoom-in}
 .ci-ph{width:100%;height:200px;background:#070910;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px}
-.cb{padding:12px;flex:1;display:flex;flex-direction:column;gap:8px}
+.origem-tag{position:absolute;top:8px;left:8px;font-size:9px;font-weight:700;letter-spacing:.05em;padding:3px 8px;border-radius:100px;text-transform:uppercase}
+.origem-site{background:#14432a;color:#4ade80}
+.origem-shopify{background:#1a2a45;color:#7ab3ff}
+.cb{padding:12px;flex:1;display:flex;flex-direction:column;gap:7px}
 .ctitle{font-size:13px;font-weight:600;color:var(--text);line-height:1.4}
 .cmeta{display:flex;flex-wrap:wrap;gap:5px}
 .chip{font-size:10px;padding:2px 8px;border-radius:100px;background:var(--surf2);color:var(--muted);border:1px solid var(--border)}
 .chip.santo{color:var(--gold);border-color:var(--gold-dim)}
 .cprice{font-size:15px;font-weight:700;color:var(--gold);font-family:'IBM Plex Mono',monospace}
 .cdesc{font-size:11px;color:var(--muted);line-height:1.5}
-.cfoot{display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px solid var(--border)}
-.tem-foto{font-size:10px;font-weight:600;color:var(--ok-fg)}
-.sem-foto{font-size:10px;color:var(--muted)}
-.shop-link{font-size:10px;color:var(--ok-fg);text-decoration:none}
-.shop-link:hover{text-decoration:underline}
 .es{text-align:center;padding:70px 20px;color:var(--muted)}
 .es h2{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--text);margin-bottom:10px;font-weight:400}
 .loading{display:flex;align-items:center;justify-content:center;gap:10px;padding:40px;color:var(--muted)}
 .sp{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* Lens modal */
+#lens-modal{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center}
+#lens-modal.show{display:flex}
+.lens-back{position:absolute;inset:0;background:rgba(0,0,0,.85)}
+.lens-content{position:relative;background:var(--surf);border:1px solid var(--border);border-radius:14px;width:min(500px,92vw);padding:24px}
+.lens-content h3{font-family:'Cormorant Garamond',serif;color:var(--gold);font-size:18px;margin-bottom:6px}
+.lens-content p{color:var(--muted);font-size:12px;margin-bottom:16px;line-height:1.5}
+.lens-drop{border:2px dashed var(--blue);border-radius:10px;padding:30px;text-align:center;color:var(--blue);cursor:pointer;font-weight:600;font-size:13px}
+.lens-drop:hover{background:#12233a}
+.lens-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer}
+.lens-result{margin-top:16px}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 </style>
@@ -63,7 +80,7 @@ main{padding:18px 20px;max-width:1400px;margin:0 auto}
 <div id="login">
   <div class="lbox">
     <div class="c">✝</div>
-    <h1>Produtos Aprovados</h1>
+    <h1>Produtos</h1>
     <input id="pwd" type="password" placeholder="Senha admin" autocomplete="current-password"/>
     <button class="lbtn" onclick="login()">Entrar</button>
   </div>
@@ -71,23 +88,47 @@ main{padding:18px 20px;max-width:1400px;margin:0 auto}
 
 <div id="app">
   <header>
-    <div class="hb"><span class="c">✝</span><h1>Produtos Aprovados</h1></div>
+    <div class="hb"><span class="c">✝</span><h1>Todos os Produtos</h1></div>
     <div>
       <a href="/admin/audit" class="hl">← Auditoria</a>
       <a href="/admin/" class="hl">Painel</a>
     </div>
   </header>
   <div class="toolbar">
-    <input class="search" id="search" placeholder="🔍 Buscar por santo, categoria, título..." oninput="buscar(this.value)"/>
-    <span class="count" id="count">—</span>
+    <div class="tb-row">
+      <input class="search" id="search" placeholder="🔍 Buscar por nome, santo, tipo..." oninput="onSearch(this.value)"/>
+      <button class="lens-btn" onclick="abrirLens()">📷 Buscar por imagem</button>
+      <span class="count" id="count">—</span>
+    </div>
+    <div class="chips-row" id="fonteChips">
+      <button class="fchip active" data-fonte="todos" onclick="setFonte('todos')">Todos</button>
+      <button class="fchip" data-fonte="shopify" onclick="setFonte('shopify')">🛍️ Já na loja Shopify</button>
+      <button class="fchip" data-fonte="site" onclick="setFonte('site')">✓ Aprovados no site</button>
+    </div>
+    <div class="chips-row" id="catChips"></div>
   </div>
   <main>
     <div id="mc"><div class="loading"><div class="sp"></div> Carregando…</div></div>
   </main>
 </div>
 
+<!-- Lens modal -->
+<div id="lens-modal">
+  <div class="lens-back" onclick="fecharLens()"></div>
+  <div class="lens-content">
+    <button class="lens-close" onclick="fecharLens()">✕</button>
+    <h3>📷 Buscar por imagem</h3>
+    <p>Envie ou cole (Ctrl+V) uma foto de um produto. A IA identifica o que é e busca produtos parecidos no seu catálogo.</p>
+    <div class="lens-drop" id="lensDrop" contenteditable="true" onpaste="lensPaste(event)" onclick="document.getElementById('lensFile').click()">
+      Clique para escolher ou cole a imagem aqui
+    </div>
+    <input type="file" id="lensFile" accept="image/*" style="display:none" onchange="lensFile(event)"/>
+    <div class="lens-result" id="lensResult"></div>
+  </div>
+</div>
+
 <script>
-let PWD='';
+let PWD='', fonteAtual='todos', catAtual='', queryAtual='';
 function login(){
   PWD=document.getElementById('pwd').value.trim();
   if(!PWD)return;
@@ -99,26 +140,37 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&document.getElementById('login').style.display!=='none')login();
 });
 
-async function api(path){
-  const r=await fetch('/api/audit/'+path,{headers:{'X-Admin-Password':PWD}});
+async function api(path,opts={}){
+  const r=await fetch('/api/audit/'+path,{...opts,headers:{'X-Admin-Password':PWD,...(opts.headers||{})}});
   if(r.status===401){alert('Senha incorreta');location.reload();throw new Error('unauth');}
   return r.json();
 }
 
 let searchTimer=null;
-function buscar(q){
-  clearTimeout(searchTimer);
-  searchTimer=setTimeout(()=>carregar(q),300);
+function onSearch(q){queryAtual=q;clearTimeout(searchTimer);searchTimer=setTimeout(carregar,300);}
+function setFonte(f){fonteAtual=f;document.querySelectorAll('#fonteChips .fchip').forEach(c=>c.classList.toggle('active',c.dataset.fonte===f));carregar();}
+function setCat(c){catAtual=catAtual===c?'':c;renderCatChips();carregar();}
+
+function renderCatChips(){
+  const el=document.getElementById('catChips');
+  if(!CATS.length){el.innerHTML='';return;}
+  el.innerHTML='<button class="fchip'+(catAtual===''?' active':'')+'" onclick="setCat(\'\')">Todas categorias</button>'+
+    CATS.map(c=>`<button class="fchip${catAtual===c?' active':''}" onclick="setCat('${e(c)}')">${e(c.replace(/_/g,' '))}</button>`).join('');
 }
 
-async function carregar(q=''){
+let CATS=[];
+async function carregar(){
   const mc=document.getElementById('mc');
   mc.innerHTML='<div class="loading"><div class="sp"></div> Carregando…</div>';
   try{
-    const r=await api('aprovados'+(q?'?q='+encodeURIComponent(q):''));
-    document.getElementById('count').textContent=`${r.total} produto(s) aprovado(s)`;
+    let path='aprovados?fonte='+fonteAtual;
+    if(queryAtual)path+='&q='+encodeURIComponent(queryAtual);
+    if(catAtual)path+='&categoria='+encodeURIComponent(catAtual);
+    const r=await api(path);
+    if(r.categorias&&r.categorias.length&&!CATS.length){CATS=r.categorias;renderCatChips();}
+    document.getElementById('count').textContent=`${r.total} produto(s) · ${r.total_shopify} na loja · ${r.total_site} no site`;
     if(!r.items.length){
-      mc.innerHTML=`<div class="es"><h2>${q?'Nenhum resultado':'Nenhum produto aprovado ainda'}</h2><p>${q?'Tente outra busca':'Aprove produtos na Auditoria para vê-los aqui'}</p></div>`;
+      mc.innerHTML=`<div class="es"><h2>Nenhum produto</h2><p>${queryAtual?'Tente outra busca':'Sincronize o Shopify ou aprove produtos na auditoria'}</p></div>`;
       return;
     }
     mc.innerHTML='<div class="grid">'+r.items.map(card).join('')+'</div>';
@@ -128,37 +180,64 @@ async function carregar(q=''){
 }
 
 function card(it){
-  // Foto: usa a editada salva (get-image) ou a original do Drive (thumb)
-  const imgUrl=it.tem_foto
-    ?`/api/audit/get-image?id=${it.id}&pwd=${encodeURIComponent(PWD)}`
+  let imgUrl='';
+  if(it.origem==='shopify')imgUrl=it.image_url||'';
+  else imgUrl=it.tem_foto?`/api/audit/get-image?id=${it.audit_id}&pwd=${encodeURIComponent(PWD)}`
     :(it.drive_file_id?`/api/audit/thumb?id=${it.drive_file_id}&s=512&pwd=${encodeURIComponent(PWD)}`:'');
   const img=imgUrl
-    ?`<img class="ci" src="${e(imgUrl)}" onclick="window.open(this.src.replace('s=512','s=1200'),'_blank')" onerror="this.outerHTML='<div class=ci-ph>sem imagem</div>'"/>`
+    ?`<img class="ci" src="${e(imgUrl)}" onclick="window.open(this.src,'_blank')" onerror="this.outerHTML='<div class=ci-ph>sem imagem</div>'"/>`
     :`<div class="ci-ph">sem imagem</div>`;
-  const titulo=it.titulo_recomendado||it.produto_identificado||'Produto';
-  const preco=it.preco_valor!=null?`R$ ${Number(it.preco_valor).toFixed(0)}`:'sem preço';
-  const shopLink=it.shopify_product_id
-    ?`<a class="shop-link" href="https://sthtec-5u.myshopify.com/admin/products/${String(it.shopify_product_id).replace('gid://shopify/Product/','')}" target="_blank">🛍️ Shopify</a>`
-    :'';
+  const preco=it.preco_valor!=null?`R$ ${Number(it.preco_valor).toFixed(0)}`:'';
+  const origemTag=it.origem==='shopify'
+    ?'<span class="origem-tag origem-shopify">🛍️ Loja</span>'
+    :'<span class="origem-tag origem-site">✓ Site</span>';
   return `<div class="card">
-    ${img}
+    <div class="ci-wrap">${img}${origemTag}</div>
     <div class="cb">
-      <div class="ctitle">${e(titulo)}</div>
+      <div class="ctitle">${e(it.titulo)}</div>
       <div class="cmeta">
         ${it.santo_devocao?`<span class="chip santo">${e(it.santo_devocao)}</span>`:''}
-        ${it.categoria?`<span class="chip">${e(it.categoria.replace(/_/g,' '))}</span>`:''}
+        ${it.categoria?`<span class="chip">${e(String(it.categoria).replace(/_/g,' '))}</span>`:''}
         ${it.material?`<span class="chip">${e(it.material)}</span>`:''}
         ${it.altura_valor?`<span class="chip">${it.altura_valor}cm</span>`:''}
       </div>
-      <div class="cprice">${preco}</div>
-      ${it.descricao_recomendada?`<div class="cdesc">${e(it.descricao_recomendada.slice(0,120))}${it.descricao_recomendada.length>120?'…':''}</div>`:''}
-      <div class="cfoot">
-        <span class="${it.tem_foto?'tem-foto':'sem-foto'}">${it.tem_foto?'✓ Com foto nova':'foto original'}</span>
-        ${shopLink}
-      </div>
+      ${preco?`<div class="cprice">${preco}</div>`:''}
+      ${it.descricao?`<div class="cdesc">${e(it.descricao.slice(0,110))}${it.descricao.length>110?'…':''}</div>`:''}
     </div>
   </div>`;
 }
+
+// ── Busca por imagem (lens) ──
+function abrirLens(){document.getElementById('lens-modal').classList.add('show');}
+function fecharLens(){document.getElementById('lens-modal').classList.remove('show');document.getElementById('lensResult').innerHTML='';document.getElementById('lensDrop').textContent='Clique para escolher ou cole a imagem aqui';}
+function lensPaste(ev){
+  ev.preventDefault();
+  const items=(ev.clipboardData||window.clipboardData)?.items;
+  for(const it of items||[]){if(it.type.startsWith('image/')){analisarImagem(it.getAsFile());return;}}
+  document.getElementById('lensResult').innerHTML='<p style="color:var(--muted);font-size:12px">Nenhuma imagem colada.</p>';
+}
+function lensFile(ev){const f=ev.target.files?.[0];if(f)analisarImagem(f);}
+
+async function analisarImagem(file){
+  const res=document.getElementById('lensResult');
+  res.innerHTML='<div class="loading"><div class="sp"></div> Identificando produto…</div>';
+  try{
+    const b64=await fileToB64(file);
+    const r=await api('lens-search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image_base64:b64})});
+    if(r.error){res.innerHTML='<p style="color:var(--muted)">Erro: '+e(r.error)+'</p>';return;}
+    // Preenche a busca com o que a IA identificou e fecha o modal
+    if(r.termo){
+      document.getElementById('search').value=r.termo;
+      queryAtual=r.termo;
+      res.innerHTML=`<p style="color:var(--ok-fg);font-size:12px">Identificado: <strong>${e(r.termo)}</strong> — buscando no catálogo…</p>`;
+      setTimeout(()=>{fecharLens();carregar();},900);
+    }else{
+      res.innerHTML='<p style="color:var(--muted)">Não consegui identificar. Tente outra foto.</p>';
+    }
+  }catch(err){res.innerHTML='<p style="color:var(--muted)">Erro: '+e(err.message)+'</p>';}
+}
+
+function fileToB64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file);});}
 
 function e(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 </script>

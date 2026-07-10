@@ -33,6 +33,7 @@ query Products($cursor: String) {
         status
         productType
         featuredImage { url }
+        priceRangeV2 { minVariantPrice { amount } }
       }
     }
   }
@@ -65,14 +66,14 @@ export async function onRequest(context) {
     const conn = data.data.products;
     for (const { node } of conn.edges) {
       await env.DB.prepare(
-        `INSERT INTO shopify_products_cache (product_id, title, title_normalized, status, product_type, image_url, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+        `INSERT INTO shopify_products_cache (product_id, title, title_normalized, status, product_type, image_url, price, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
          ON CONFLICT(product_id) DO UPDATE SET
            title = excluded.title, title_normalized = excluded.title_normalized,
            status = excluded.status, product_type = excluded.product_type,
-           image_url = excluded.image_url, updated_at = datetime('now')`
+           image_url = excluded.image_url, price = excluded.price, updated_at = datetime('now')`
       )
-        .bind(node.id, node.title, normalizeTitle(node.title), node.status, node.productType, node.featuredImage?.url || null)
+        .bind(node.id, node.title, normalizeTitle(node.title), node.status, node.productType, node.featuredImage?.url || null, node.priceRangeV2?.minVariantPrice?.amount ? Number(node.priceRangeV2.minVariantPrice.amount) : null)
         .run();
       count++;
     }
