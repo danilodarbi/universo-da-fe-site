@@ -410,39 +410,52 @@ async function renderTab(){
 
 // ── Em Revisão (lote atual) ───────────────────────────────────────────────────
 async function renderRevisao(mc){
-  if(!batchId){
-    mc.innerHTML='<div class="es"><h2>Nenhum lote ativo</h2><p>Clique em <strong>▶ Processar próximos 15</strong> para iniciar.</p></div>';
+  mc.innerHTML='<div class="loading-inline"><div class="sp"></div> Carregando…</div>';
+  // Mostra TODOS os itens prontos para revisão (todos os lotes), paginado de 15
+  const limit=15, offset=tabOffset.revisao||0;
+  const r=await api(`records?status=PRONTO_PARA_REVISAO&limit=${limit}&offset=${offset}`);
+  if(r.error){mc.innerHTML='<div class="es"><h2>Erro</h2><p>'+r.error+'</p></div>';return;}
+  if(!r.items||!r.items.length){
+    mc.innerHTML='<div class="es"><h2>Nada para revisar agora</h2><p>Clique em <strong>▶ Processar próximos 15</strong> para analisar mais fotos da fila.</p></div>';
     return;
   }
-  mc.innerHTML='<div class="loading-inline"><div class="sp"></div> Carregando…</div>';
-  const r=await api('batch-status?batch_id='+batchId);
-  if(r.error){mc.innerHTML='<div class="es"><h2>Lote não encontrado</h2></div>';return;}
-  const{batch,items}=r;
-  document.getElementById('pb').style.width=(batch.total_items?Math.round(batch.processed_items/batch.total_items*100):0)+'%';
-  const pend=items.filter(i=>['PRONTO_PARA_REVISAO','ERRO','ANALISANDO','PENDENTE'].includes(i.status));
-  const res=items.filter(i=>['APROVADO','REPROVADO','PRECISA_DE_AJUSTE','PRECISA_DE_NOVA_FOTO'].includes(i.status));
-
-  // Banner: todos sem análise = key não configurada
-  const semAnalise=pend.filter(i=>!i.produto_identificado&&!i.ai_error);
-  const bannerH=semAnalise.length===pend.length&&pend.length>0?`
-    <div style="background:#1a1400;border:1px solid var(--warn);border-radius:8px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:flex-start;gap:12px">
-      <span style="font-size:20px">⚠</span>
-      <div>
-        <div style="font-weight:600;color:var(--warn-fg);margin-bottom:4px">ANTHROPIC_API_KEY não configurada</div>
-        <div style="font-size:12px;color:#c9a850;line-height:1.6">
-          Estes ${semAnalise.length} itens foram processados sem análise de IA.<br>
-          1. Adicione <code style="background:#2a2000;padding:1px 5px;border-radius:3px">ANTHROPIC_API_KEY</code> no Cloudflare → Settings → Variables and secrets<br>
-          2. Clique <strong>↩ Reprocessar lote</strong> (reseta estes itens para a fila)<br>
-          3. Clique <strong>▶ Processar próximos 15</strong> novamente
-        </div>
-      </div>
-    </div>`:'';
-
-  let h=bannerH;
-  if(pend.length)h+=`<div class="sh"><span class="st">Aguardando revisão</span><span class="ss">${pend.length} foto(s)</span></div><div class="grid">${pend.map(i=>card(i,false)).join('')}</div>`;
-  if(res.length)h+=`<div class="sh"><span class="st">Resolvidos neste lote</span><span class="ss">${res.length} foto(s)</span></div><div class="grid">${res.map(i=>card(i,true)).join('')}</div>`;
-  if(!h)h='<div class="es"><h2>Lote concluído</h2><p>Clique em <strong>▶ Processar próximos 15</strong> para continuar.</p></div>';
+  const h=`<div class="sh"><span class="st">Aguardando revisão</span><span class="ss">${r.total} foto(s)</span>
+    <button class="btn bd" id="btnGenLote" style="border-color:#8b5cf6;color:#a78bfa;margin-left:10px" onclick="gerarFotosLoteRevisao()">✨ Gerar fotos destas 15</button></div>
+    <div class="grid">${r.items.map(i=>card(i,false)).join('')}</div>
+    ${pagination(r.total,limit,offset,'revisao')}`;
   mc.innerHTML=h;
+}
+
+// Gera fotos para os itens visíveis na aba Em Revisão (independe de lote)
+async function gerarFotosLoteRevisao(){
+  if(genBatchRunning)return;
+  const limit=15, offset=tabOffset.revisao||0;
+  const r=await api(`records?status=PRONTO_PARA_REVISAO&limit=${limit}&offset=${offset}`);
+  if(r.error||!r.items){log('Erro ao buscar itens','er');return;}
+  const alvos=r.items.filter(i=>!i.imagem_enviada);
+  if(!alvos.length){log('Todos estes já têm foto nova','er');return;}
+  if(!confirm(`Gerar fotos com IA para ${alvos.length} item(ns)? (~R$0,10 cada)`))return;
+  genBatchRunning=true;
+  const btn=document.getElementById('btnGenLote');
+  if(btn)btn.disabled=true;
+  let ok=0,fail=0;
+  for(const it of alvos){
+    if(btn)btn.textContent=`⏳ ${ok+fail+1}/${alvos.length}…`;
+    try{
+      const rr=await api('generate-image',{method:'POST',body:JSON.stringify({item_id:it.id})});
+      if(rr.error){fail++;log(`Item ${it.id}: ${rr.error}`,'er');await refreshCard(it.id);continue;}
+      if(rr.needs_compression&&rr.image_base64){
+        const comp=await comprimirDataUrl(rr.image_base64);
+        const r2=await api('upload-image',{method:'POST',body:JSON.stringify({item_id:it.id,image_base64:comp})});
+        if(r2.error){fail++;log(`Item ${it.id}: ${r2.error}`,'er');await refreshCard(it.id);continue;}
+      }
+      ok++;log(`Item ${it.id}: foto gerada ✓`);
+      await refreshCard(it.id);
+    }catch(err){fail++;log(`Item ${it.id}: ${err.message}`,'er');}
+  }
+  log(`Fotos: ${ok} geradas, ${fail} falha(s)`,fail?'er':'ok');
+  genBatchRunning=false;
+  if(btn){btn.disabled=false;btn.textContent='✨ Gerar fotos destas 15';}
 }
 
 // ── Fila (todos PENDENTE) ─────────────────────────────────────────────────────
@@ -1069,6 +1082,11 @@ async function processarProximos10(){
   log('Analisando fotos...');
   try{
     const s=await api('start-batch',{method:'POST'});
+    if(s.error==='sem_registros_pendentes'){
+      log('✓ Todas as fotos da fila já foram analisadas! Vá para a aba "Em Revisão" para revisá-las.','ok');
+      setTab('revisao');
+      return;
+    }
     if(s.error){log('Erro: '+s.error,'er');return;}
     batchId=s.batch_id;
     log(`Lote #${batchId} ${s.resumed?'(retomado)':'criado'}.`,'ok');
