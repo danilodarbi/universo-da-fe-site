@@ -6,19 +6,22 @@
 
 import { jsonResponse, corsPreflight, requireAuth, fetchThumbnailAsBase64 } from './_shared.js';
 
-const PROMPT = `Reproduce the exact product from this photo as a premium e-commerce product photograph. The product itself must stay 100% identical — same figure, same face, same colors, same gold/blue/pearl details, same crown, same base, same engravings, same proportions and same size. Copy it faithfully like a photograph, do NOT redraw, redesign or reinterpret any part of it.
+const PROMPT = `Recreate this exact product photo as a premium e-commerce image. Study the product carefully and copy it with total fidelity.
 
-BACKGROUND AND STYLE (match this exact look):
-Place the product on a light cream travertine or warm-white marble surface with soft natural texture. In the background, softly blurred out of focus, add a few delicate green eucalyptus or olive branches on one side. Bright, airy, luminous scene with warm cream and ivory tones. Soft natural window daylight coming from the side, casting gentle soft shadows and delicate light patterns. Elegant, serene, reverent, high-end catholic boutique aesthetic (House of Joppa style).
+THE PRODUCT MUST BE IDENTICAL TO THE ORIGINAL — copy it exactly:
+Same figure/saint, same face and expression, same exact colors, same gold/silver/blue/pearl details, same crown, same halo, same base, same engravings, same bead count and bead colors, same crucifix, same proportions and same relative sizes between parts. Do NOT redraw, redesign, beautify, restyle or reinterpret any part. Treat every detail of the product as fixed and untouchable — reproduce it faithfully like a photograph of the same object.
 
-FRAMING (very important — never crop):
-Show the COMPLETE product fully inside the frame with comfortable empty space around every side. The entire product from top to bottom and side to side must be visible — crown, halo, base, hands, everything. Never cut off any part. Center the product as the clear hero. Keep the product's real proportions and real size feeling (a small statue looks small and delicate, a large one looks substantial).
+SQUARE FRAMING — FIT THE WHOLE PRODUCT, NEVER CROP:
+The image is square. Fit the COMPLETE product inside the square with comfortable empty margin on all four sides (at least 12%). Every part must be fully visible — top of crown/halo down to the base, and both sides. For tall items (statues, rosaries), scale them down so they fit entirely in the square without touching or exiting any edge. Center the product as the hero. Keep its real proportions — a small delicate item stays small and delicate.
 
-CLEAN: remove any plastic packaging, price tag, sticker, label or clutter. Show only the clean product.
+CLEAN: remove plastic packaging, price tags, stickers, labels, rulers, hands and any clutter. Show only the clean product.
 
-PHOTOREALISM: real professional product photograph, full-frame camera, soft studio daylight. Natural textures (resin, gold leaf, pearls, enamel), realistic soft shadows and gentle reflections. No CGI, no digital-art glow, no oversaturation, no plastic smoothing. It must look like a genuine photo.
+BACKGROUND (House of Joppa style):
+Light warm-white marble or cream travertine surface with soft natural veining. A few blurred green eucalyptus or olive branches softly out of focus at the far edges (never covering the product). Bright, airy, luminous, cream and ivory tones. Soft natural window daylight from one side with gentle soft shadows.
 
-Output one high-resolution photorealistic image of the complete uncropped product, beautifully staged.`;
+PHOTOREALISM: real professional product photograph, full-frame camera, soft daylight. Natural textures (resin, gold leaf, pearls, enamel, metal), realistic soft shadows and reflections. No CGI, no digital-art glow, no oversaturation, no plastic smoothing. Must look like a genuine photo.
+
+Output one square photorealistic image of the complete, uncropped, faithful product beautifully staged.`;
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -125,9 +128,9 @@ async function generateWithOpenAI(env, imageB64) {
   form.append('model', 'gpt-image-1');
   form.append('image', new Blob([bytes], { type: 'image/jpeg' }), 'original.jpg');
   form.append('prompt', PROMPT);
-  form.append('size', 'auto');
-  form.append('quality', 'medium'); // medium ~R$0,25/img (high era ~R$1). Input 1600px compensa.
-  form.append('input_fidelity', 'high'); // fidelidade alta mantem o produto fiel mesmo em medium
+  form.append('size', '1024x1024'); // tamanho fixo mais barato (auto pode escolher 1536 = mais caro)
+  form.append('quality', 'low'); // low ~R$0,10/img — a maioria sai boa; as que erram voce refaz
+  // input_fidelity removido: dobrava o custo dos tokens de entrada. Input 1600px ja garante fidelidade.
 
   const res = await fetch('https://api.openai.com/v1/images/edits', {
     method: 'POST',
