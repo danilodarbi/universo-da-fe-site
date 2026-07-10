@@ -274,6 +274,7 @@ main{padding:18px 20px;max-width:1400px;margin:0 auto}
   <header>
     <div class="hb"><span class="c">✝</span><h1>Auditoria de Fotos</h1></div>
     <div class="hs" id="hs"></div>
+    <a href="/admin/aprovados" class="hl">✓ Aprovados</a>
     <a href="/admin/" class="hl">← Painel</a>
   </header>
 
@@ -1259,15 +1260,6 @@ async function exec(id,body){
     if(r.error==='aprovacao_bloqueada'){log('Bloqueado: '+r.reason,'er');alert('Não pode aprovar: '+r.reason);return;}
     if(r.error){log('Erro: '+r.error,'er');return;}
     log(`Item ${id}: ${r.status}`,r.status==='APROVADO'?'ok':'');
-    // Ao APROVAR: envia automaticamente para a loja Shopify
-    if(body.action==='APROVAR'){
-      log(`Enviando item ${id} para a loja Shopify…`);
-      try{
-        const ps=await api('push-to-shopify',{method:'POST',body:JSON.stringify({item_id:id})});
-        if(ps.error)log(`Shopify: ${ps.error}`,'er');
-        else log(`✓ ${ps.msg}${ps.image_attached?' (com foto)':''}`,'ok');
-      }catch(e){log('Erro Shopify: '+e.message,'er');}
-    }
     // Ações que mudam o item de aba: remove o card da tela com animação
     const MOVE_ACTIONS=['REPROVAR','APROVAR','SOLICITAR_NOVA_FOTO'];
     if(MOVE_ACTIONS.includes(body.action)){
