@@ -59,6 +59,22 @@ export async function onRequest(context) {
       }
     }
 
+    // Se a análise falhou de verdade (rede/API/rate-limit), NÃO marca como
+    // "pronto para revisão" com análise vazia — isso é o que fazia os cards
+    // aparecerem como "Sem análise". Marca ERRO com o motivo real e mantém o
+    // item re-processável (reprocess-batch mode:'errors' recoloca na fila).
+    if (env.ANTHROPIC_API_KEY && aiError) {
+      await env.DB.prepare(
+        `UPDATE audit_records
+           SET status = 'ERRO', ai_error = ?, ai_result_json = ?, updated_at = datetime('now')
+         WHERE id = ?`
+      ).bind(aiError, JSON.stringify({ ai: null, error: aiError }), item.id).run();
+      await env.DB.prepare(
+        `UPDATE batches SET error_items = error_items + 1, updated_at = datetime('now') WHERE id = ?`
+      ).bind(batchId).run();
+      return jsonResponse({ done: false, item_id: item.id, status: 'ERRO', ai_error: aiError });
+    }
+
     // Busca candidatos Shopify: usa descrição+santo da IA (muito mais precisa que nome de arquivo)
     const candidatesRows = await env.DB.prepare(
       `SELECT product_id, title, product_type FROM shopify_products_cache`
