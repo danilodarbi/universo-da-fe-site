@@ -300,29 +300,49 @@ REGRAS:
 • Prefira arriscar o nome mais provável com confianca média a desistir com "não identificado"
 • NUNCA invente atributo que não vê`;
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': (env.ANTHROPIC_API_KEY || '').replace(/[\s\r\n]+/g, ''),
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1536,
-      temperature: 0,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 } },
-          { type: 'text', text: prompt },
-        ],
-      }],
-    }),
+  const payload = JSON.stringify({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 1536,
+    temperature: 0,
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 } },
+        { type: 'text', text: prompt },
+      ],
+    }],
   });
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(`Anthropic: ${data.error?.message || res.status}`);
+  // Retry com backoff: erros transitórios (429 rate limit, 529 overloaded, 5xx,
+  // falha de rede) eram engolidos e viravam "sem análise". Agora tenta de novo.
+  const RETRYABLE = new Set([408, 409, 429, 500, 502, 503, 504, 529]);
+  let res, data, lastErr;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': (env.ANTHROPIC_API_KEY || '').replace(/[\s\r\n]+/g, ''),
+          'anthropic-version': '2023-06-01',
+        },
+        body: payload,
+      });
+      data = await res.json().catch(() => ({}));
+      if (res.ok) { lastErr = null; break; }
+      lastErr = new Error(`Anthropic ${res.status}: ${data.error?.message || 'erro'}`);
+      // 4xx não-retryável (ex.: 400 imagem inválida, 401 chave) — não adianta tentar de novo
+      if (!RETRYABLE.has(res.status)) throw lastErr;
+    } catch (netErr) {
+      lastErr = netErr instanceof Error ? netErr : new Error(String(netErr));
+      // se foi um 4xx já lançado acima, propaga sem novas tentativas
+      if (res && !RETRYABLE.has(res.status)) throw lastErr;
+    }
+    // backoff exponencial com jitter: 0.6s, 1.2s, 2.4s, 4.8s
+    await new Promise(r => setTimeout(r, 600 * 2 ** attempt + Math.random() * 300));
+  }
+  if (lastErr) throw lastErr;
+  if (!res || !res.ok) throw new Error(`Anthropic: falha após retries (${res?.status ?? 'sem resposta'})`);
   // Extrai JSON da resposta mesmo se vier com blocos de código markdown
   const text = data.content?.[0]?.text || '{}';
   const start = text.indexOf('{');
