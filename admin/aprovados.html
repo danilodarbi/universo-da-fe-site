@@ -137,8 +137,8 @@ main{padding:18px 20px;max-width:1500px;margin:0 auto}
   <div class="lens-back" onclick="fecharEditor()"></div>
   <div class="lens-content" style="width:min(560px,94vw);max-height:92vh;overflow-y:auto">
     <button class="lens-close" onclick="fecharEditor()">✕</button>
-    <h3>✏️ Editar produto na loja</h3>
-    <p>Altere os dados ou troque a imagem por uma que você fez melhor. Salva direto no Shopify.</p>
+    <h3 id="ed-modal-title">✏️ Editar produto</h3>
+    <p id="ed-nota">Altere os dados ou troque a imagem. Salva direto no Shopify.</p>
     <div style="display:flex;gap:14px;margin-bottom:14px">
       <div style="flex:1;text-align:center">
         <div class="ed-lbl">Imagem atual</div>
@@ -190,7 +190,7 @@ function renderCatChips(){
     CATS.map(c=>`<button class="fchip${catAtual===c?' active':''}" onclick="setCat('${e(c)}')">${e(c.replace(/_/g,' '))}</button>`).join('');
 }
 
-let CATS=[];
+let PRODUTOS={};
 async function carregar(){
   const mc=document.getElementById('mc');
   mc.innerHTML='<div class="loading"><div class="sp"></div> Carregando…</div>';
@@ -202,9 +202,12 @@ async function carregar(){
     if(r.categorias&&r.categorias.length&&!CATS.length){CATS=r.categorias;renderCatChips();}
     document.getElementById('count').textContent=`${r.total} produto(s) · ${r.total_shopify} na loja · ${r.total_site} no site`;
     if(!r.items.length){
-      mc.innerHTML=`<div class="es"><h2>Nenhum produto</h2><p>${queryAtual?'Tente outra busca':'Sincronize o Shopify ou aprove produtos na auditoria'}</p></div>`;
+      mc.innerHTML=`<div class="es"><h2>Nenhum produto</h2><p>${queryAtual?'Tente outra busca':'Sincronize o Shopify (botão na Auditoria) ou aprove produtos'}</p></div>`;
       return;
     }
+    // Guarda os produtos por id para o editor buscar depois (sem JSON no onclick)
+    PRODUTOS={};
+    r.items.forEach(it=>{PRODUTOS[it.id]=it;});
     mc.innerHTML='<div class="grid">'+r.items.map(card).join('')+'</div>';
   }catch(err){
     mc.innerHTML='<div class="es"><h2>Erro</h2><p>'+e(err.message)+'</p></div>';
@@ -223,11 +226,9 @@ function card(it){
   const origemTag=it.origem==='shopify'
     ?'<span class="origem-tag origem-shopify">🛍️ Loja</span>'
     :'<span class="origem-tag origem-site">✓ Site</span>';
-  // Produtos da Shopify são clicáveis para editar
-  const editavel=it.origem==='shopify'&&it.shopify_product_id;
-  const clickAttr=editavel?`onclick='abrirEditor(${JSON.stringify(it).replace(/'/g,"&#39;")})' style="cursor:pointer"`:'';
-  return `<div class="card" ${clickAttr}>
-    <div class="ci-wrap">${img}${origemTag}${editavel?'<span class="edit-hint">✏️ Editar</span>':''}</div>
+  // Todos os cards são clicáveis para editar; passa só o ID (robusto contra aspas/acentos)
+  return `<div class="card" onclick="abrirEditor('${e(it.id)}')" style="cursor:pointer">
+    <div class="ci-wrap">${img}${origemTag}<span class="edit-hint">✏️ Editar</span></div>
     <div class="cb">
       <div class="ctitle">${e(it.titulo)}</div>
       <div class="cmeta">
@@ -242,16 +243,29 @@ function card(it){
   </div>`;
 }
 
-// ── Editor de produto Shopify ──
+// ── Editor de produto ──
 let editProduct=null, editImageB64=null;
-function abrirEditor(it){
+function abrirEditor(id){
+  const it=PRODUTOS[id];
+  if(!it){alert('Produto não encontrado');return;}
   editProduct=it;editImageB64=null;
+  const isShopify=it.origem==='shopify';
+  document.getElementById('ed-modal-title').textContent=isShopify?'✏️ Editar produto na loja Shopify':'✏️ Editar produto';
   document.getElementById('ed-title').value=it.titulo||'';
   document.getElementById('ed-price').value=it.preco_valor!=null?it.preco_valor:'';
   document.getElementById('ed-desc').value='';
-  document.getElementById('ed-current-img').src=it.image_url||'';
+  const curImg=it.origem==='shopify'?(it.image_url||'')
+    :(it.tem_foto?`/api/audit/get-image?id=${it.audit_id}&pwd=${encodeURIComponent(PWD)}`
+    :(it.drive_file_id?`/api/audit/thumb?id=${it.drive_file_id}&s=512&pwd=${encodeURIComponent(PWD)}`:''));
+  const ci=document.getElementById('ed-current-img');
+  if(curImg){ci.src=curImg;ci.style.display='block';}else{ci.style.display='none';}
   document.getElementById('ed-new-preview').style.display='none';
+  document.getElementById('ed-drop').textContent='Clique ou cole (Ctrl+V)';
   document.getElementById('ed-result').innerHTML='';
+  // Aviso se for produto do site (ainda não está na loja)
+  document.getElementById('ed-nota').textContent=isShopify
+    ?'Salva direto no Shopify.'
+    :'Este produto foi aprovado no site. Salvar cria/atualiza ele na loja Shopify.';
   document.getElementById('editor-modal').classList.add('show');
 }
 function fecharEditor(){document.getElementById('editor-modal').classList.remove('show');editProduct=null;editImageB64=null;}
@@ -284,19 +298,37 @@ function compressImg(file){
 async function salvarEditor(){
   if(!editProduct)return;
   const res=document.getElementById('ed-result');
-  res.innerHTML='<div class="loading"><div class="sp"></div> Salvando na loja…</div>';
-  const payload={product_id:editProduct.shopify_product_id};
   const title=document.getElementById('ed-title').value.trim();
   const price=document.getElementById('ed-price').value.trim();
   const desc=document.getElementById('ed-desc').value.trim();
-  if(title&&title!==editProduct.titulo)payload.title=title;
-  if(price!=='')payload.price=price;
-  if(desc)payload.description=desc;
-  if(editImageB64){payload.image_base64=editImageB64;payload.replace_image=true;}
+
+  res.innerHTML='<div class="loading"><div class="sp"></div> Salvando…</div>';
+
   try{
-    const r=await api('edit-shopify-product',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    if(r.error){res.innerHTML='<p style="color:var(--muted)">Erro: '+e(r.error)+'</p>';return;}
-    res.innerHTML='<p style="color:var(--ok-fg)">✓ '+e(r.msg)+'</p>';
+    if(editProduct.origem==='shopify'&&editProduct.shopify_product_id){
+      // Produto já na loja: edita direto
+      const payload={product_id:editProduct.shopify_product_id};
+      if(title&&title!==editProduct.titulo)payload.title=title;
+      if(price!=='')payload.price=price;
+      if(desc)payload.description=desc;
+      if(editImageB64){payload.image_base64=editImageB64;payload.replace_image=true;}
+      const r=await api('edit-shopify-product',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      if(r.error){res.innerHTML='<p style="color:var(--muted)">Erro: '+e(r.error)+'</p>';return;}
+      res.innerHTML='<p style="color:var(--ok-fg)">✓ '+e(r.msg)+'</p>';
+    } else {
+      // Produto do site: salva no D1 (via review-action) e opcionalmente envia ao Shopify
+      const fields={};
+      if(title)fields.titulo_recomendado=title;
+      if(price!=='')fields.preco_valor=Number(price);
+      if(desc)fields.descricao_recomendada=desc;
+      if(Object.keys(fields).length){
+        await api('review-action',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_id:editProduct.audit_id,action:'CORRIGIR',fields})});
+      }
+      if(editImageB64){
+        await api('upload-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_id:editProduct.audit_id,image_base64:editImageB64})});
+      }
+      res.innerHTML='<p style="color:var(--ok-fg)">✓ Salvo no site</p>';
+    }
     setTimeout(()=>{fecharEditor();carregar();},1200);
   }catch(err){res.innerHTML='<p style="color:var(--muted)">Erro: '+e(err.message)+'</p>';}
 }
