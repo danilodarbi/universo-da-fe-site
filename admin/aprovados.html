@@ -71,6 +71,11 @@ main{padding:18px 20px;max-width:1500px;margin:0 auto}
 .lens-drop:hover{background:#12233a}
 .lens-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer}
 .lens-result{margin-top:16px}
+.edit-hint{position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;padding:3px 8px;border-radius:100px;background:#2a2000;color:var(--gold)}
+.ed-field{margin-bottom:10px}
+.ed-lbl{display:block;font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.ed-inp{width:100%;padding:9px 12px;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;outline:none;font-family:'Inter',sans-serif}
+.ed-inp:focus{border-color:var(--gold)}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 </style>
@@ -124,6 +129,33 @@ main{padding:18px 20px;max-width:1500px;margin:0 auto}
     </div>
     <input type="file" id="lensFile" accept="image/*" style="display:none" onchange="lensFile(event)"/>
     <div class="lens-result" id="lensResult"></div>
+  </div>
+</div>
+
+<!-- Editor de produto Shopify -->
+<div id="editor-modal" style="position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center">
+  <div class="lens-back" onclick="fecharEditor()"></div>
+  <div class="lens-content" style="width:min(560px,94vw);max-height:92vh;overflow-y:auto">
+    <button class="lens-close" onclick="fecharEditor()">✕</button>
+    <h3>✏️ Editar produto na loja</h3>
+    <p>Altere os dados ou troque a imagem por uma que você fez melhor. Salva direto no Shopify.</p>
+    <div style="display:flex;gap:14px;margin-bottom:14px">
+      <div style="flex:1;text-align:center">
+        <div class="ed-lbl">Imagem atual</div>
+        <img id="ed-current-img" style="width:100%;max-height:160px;object-fit:contain;background:#070910;border-radius:8px;margin-top:4px"/>
+      </div>
+      <div style="flex:1;text-align:center">
+        <div class="ed-lbl">Nova imagem</div>
+        <div class="lens-drop" id="ed-drop" contenteditable="true" onpaste="edPaste(event)" onclick="document.getElementById('ed-file').click()" style="padding:20px;margin-top:4px;min-height:100px;font-size:12px">Clique ou cole (Ctrl+V)</div>
+        <input type="file" id="ed-file" accept="image/*" style="display:none" onchange="edFile(event)"/>
+        <img id="ed-new-preview" style="width:100%;max-height:160px;object-fit:contain;background:#070910;border-radius:8px;margin-top:4px;display:none"/>
+      </div>
+    </div>
+    <div class="ed-field"><label class="ed-lbl">Título</label><input class="ed-inp" id="ed-title"/></div>
+    <div class="ed-field"><label class="ed-lbl">Preço (R$)</label><input class="ed-inp" id="ed-price" type="number"/></div>
+    <div class="ed-field"><label class="ed-lbl">Descrição (deixe vazio para não alterar)</label><textarea class="ed-inp" id="ed-desc" rows="3"></textarea></div>
+    <button class="lbtn" style="margin-top:12px" onclick="salvarEditor()">💾 Salvar na loja Shopify</button>
+    <div id="ed-result" style="margin-top:10px"></div>
   </div>
 </div>
 
@@ -185,14 +217,17 @@ function card(it){
   else imgUrl=it.tem_foto?`/api/audit/get-image?id=${it.audit_id}&pwd=${encodeURIComponent(PWD)}`
     :(it.drive_file_id?`/api/audit/thumb?id=${it.drive_file_id}&s=512&pwd=${encodeURIComponent(PWD)}`:'');
   const img=imgUrl
-    ?`<img class="ci" src="${e(imgUrl)}" onclick="window.open(this.src,'_blank')" onerror="this.outerHTML='<div class=ci-ph>sem imagem</div>'"/>`
+    ?`<img class="ci" src="${e(imgUrl)}" onerror="this.outerHTML='<div class=ci-ph>sem imagem</div>'"/>`
     :`<div class="ci-ph">sem imagem</div>`;
   const preco=it.preco_valor!=null?`R$ ${Number(it.preco_valor).toFixed(0)}`:'';
   const origemTag=it.origem==='shopify'
     ?'<span class="origem-tag origem-shopify">🛍️ Loja</span>'
     :'<span class="origem-tag origem-site">✓ Site</span>';
-  return `<div class="card">
-    <div class="ci-wrap">${img}${origemTag}</div>
+  // Produtos da Shopify são clicáveis para editar
+  const editavel=it.origem==='shopify'&&it.shopify_product_id;
+  const clickAttr=editavel?`onclick='abrirEditor(${JSON.stringify(it).replace(/'/g,"&#39;")})' style="cursor:pointer"`:'';
+  return `<div class="card" ${clickAttr}>
+    <div class="ci-wrap">${img}${origemTag}${editavel?'<span class="edit-hint">✏️ Editar</span>':''}</div>
     <div class="cb">
       <div class="ctitle">${e(it.titulo)}</div>
       <div class="cmeta">
@@ -205,6 +240,65 @@ function card(it){
       ${it.descricao?`<div class="cdesc">${e(it.descricao.slice(0,110))}${it.descricao.length>110?'…':''}</div>`:''}
     </div>
   </div>`;
+}
+
+// ── Editor de produto Shopify ──
+let editProduct=null, editImageB64=null;
+function abrirEditor(it){
+  editProduct=it;editImageB64=null;
+  document.getElementById('ed-title').value=it.titulo||'';
+  document.getElementById('ed-price').value=it.preco_valor!=null?it.preco_valor:'';
+  document.getElementById('ed-desc').value='';
+  document.getElementById('ed-current-img').src=it.image_url||'';
+  document.getElementById('ed-new-preview').style.display='none';
+  document.getElementById('ed-result').innerHTML='';
+  document.getElementById('editor-modal').classList.add('show');
+}
+function fecharEditor(){document.getElementById('editor-modal').classList.remove('show');editProduct=null;editImageB64=null;}
+
+function edPaste(ev){
+  ev.preventDefault();
+  const items=(ev.clipboardData||window.clipboardData)?.items;
+  for(const it of items||[]){if(it.type.startsWith('image/')){edSetImage(it.getAsFile());return;}}
+}
+function edFile(ev){const f=ev.target.files?.[0];if(f)edSetImage(f);}
+async function edSetImage(file){
+  const b64=await compressImg(file);
+  editImageB64=b64;
+  const prev=document.getElementById('ed-new-preview');
+  prev.src=b64;prev.style.display='block';
+  document.getElementById('ed-drop').textContent='✓ Nova imagem pronta';
+}
+function compressImg(file){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();img.onload=()=>{
+      const MAX=1280;let w=img.width,h=img.height;
+      if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
+      resolve(c.toDataURL('image/jpeg',0.85));
+    };img.onerror=reject;img.src=URL.createObjectURL(file);
+  });
+}
+
+async function salvarEditor(){
+  if(!editProduct)return;
+  const res=document.getElementById('ed-result');
+  res.innerHTML='<div class="loading"><div class="sp"></div> Salvando na loja…</div>';
+  const payload={product_id:editProduct.shopify_product_id};
+  const title=document.getElementById('ed-title').value.trim();
+  const price=document.getElementById('ed-price').value.trim();
+  const desc=document.getElementById('ed-desc').value.trim();
+  if(title&&title!==editProduct.titulo)payload.title=title;
+  if(price!=='')payload.price=price;
+  if(desc)payload.description=desc;
+  if(editImageB64){payload.image_base64=editImageB64;payload.replace_image=true;}
+  try{
+    const r=await api('edit-shopify-product',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(r.error){res.innerHTML='<p style="color:var(--muted)">Erro: '+e(r.error)+'</p>';return;}
+    res.innerHTML='<p style="color:var(--ok-fg)">✓ '+e(r.msg)+'</p>';
+    setTimeout(()=>{fecharEditor();carregar();},1200);
+  }catch(err){res.innerHTML='<p style="color:var(--muted)">Erro: '+e(err.message)+'</p>';}
 }
 
 // ── Busca por imagem (lens) ──

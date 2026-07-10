@@ -126,8 +126,8 @@ async function generateWithOpenAI(env, imageB64) {
   form.append('image', new Blob([bytes], { type: 'image/jpeg' }), 'original.jpg');
   form.append('prompt', PROMPT);
   form.append('size', 'auto');
-  form.append('quality', 'high');
-  form.append('input_fidelity', 'high');
+  form.append('quality', 'medium'); // medium ~R$0,25/img (high era ~R$1). Input 1600px compensa.
+  form.append('input_fidelity', 'high'); // fidelidade alta mantem o produto fiel mesmo em medium
 
   const res = await fetch('https://api.openai.com/v1/images/edits', {
     method: 'POST',
