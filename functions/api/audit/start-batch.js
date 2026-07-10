@@ -6,7 +6,7 @@
 
 import { jsonResponse, corsPreflight, requireAuth } from './_shared.js';
 
-const BATCH_SIZE = 10;
+const BATCH_SIZE = 15;
 
 export async function onRequest(context) {
   const { request, env } = context;

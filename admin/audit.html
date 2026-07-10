@@ -213,6 +213,9 @@ main{padding:18px 20px;max-width:1400px;margin:0 auto}
 .paste-target img{max-width:100%;border-radius:4px}
 .paste-zone.done{margin-top:8px;padding:12px;border:2px solid #2e5c3a;border-radius:8px;background:#14261a;color:var(--ok-fg);font-size:12px;font-weight:600;text-align:center;cursor:pointer}
 .paste-saved{margin-top:8px;padding:9px 11px;border:1px solid #2e5c3a;border-radius:8px;background:#14261a;display:flex;align-items:center;gap:8px}
+.shop-link{display:block;text-align:center;margin-top:6px;padding:8px;background:#0d1a12;border:1px solid #2e5c3a;border-radius:7px;color:var(--ok-fg);font-size:12px;font-weight:600;text-decoration:none}
+.shop-link:hover{background:#14261a}
+.enviado-badge{text-align:center;font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--ok-fg);margin-top:4px}
 .paste-saved-ok{color:var(--ok-fg);font-size:12px;font-weight:600;flex:1}
 .paste-troca{padding:5px 10px;background:var(--surf2);color:var(--text);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:border-color .15s}
 .paste-troca:hover{border-color:var(--gold-dim)}
@@ -275,7 +278,7 @@ main{padding:18px 20px;max-width:1400px;margin:0 auto}
   </header>
 
   <div class="ctrl">
-    <button class="btn bg" onclick="processarProximos10()" id="btnP">▶ Processar próximos 10</button>
+    <button class="btn bg" onclick="processarProximos10()" id="btnP">▶ Processar próximos 15</button>
     <button class="btn bd" onclick="gerarFotosLote()" id="btnGenLote" style="border-color:#8b5cf6;color:#a78bfa">✨ Gerar fotos do lote</button>
     <div class="sep"></div>
     <button class="btn bd" onclick="syncDrive()">🔄 Drive</button>
@@ -407,7 +410,7 @@ async function renderTab(){
 // ── Em Revisão (lote atual) ───────────────────────────────────────────────────
 async function renderRevisao(mc){
   if(!batchId){
-    mc.innerHTML='<div class="es"><h2>Nenhum lote ativo</h2><p>Clique em <strong>▶ Processar próximos 10</strong> para iniciar.</p></div>';
+    mc.innerHTML='<div class="es"><h2>Nenhum lote ativo</h2><p>Clique em <strong>▶ Processar próximos 15</strong> para iniciar.</p></div>';
     return;
   }
   mc.innerHTML='<div class="loading-inline"><div class="sp"></div> Carregando…</div>';
@@ -429,7 +432,7 @@ async function renderRevisao(mc){
           Estes ${semAnalise.length} itens foram processados sem análise de IA.<br>
           1. Adicione <code style="background:#2a2000;padding:1px 5px;border-radius:3px">ANTHROPIC_API_KEY</code> no Cloudflare → Settings → Variables and secrets<br>
           2. Clique <strong>↩ Reprocessar lote</strong> (reseta estes itens para a fila)<br>
-          3. Clique <strong>▶ Processar próximos 10</strong> novamente
+          3. Clique <strong>▶ Processar próximos 15</strong> novamente
         </div>
       </div>
     </div>`:'';
@@ -437,7 +440,7 @@ async function renderRevisao(mc){
   let h=bannerH;
   if(pend.length)h+=`<div class="sh"><span class="st">Aguardando revisão</span><span class="ss">${pend.length} foto(s)</span></div><div class="grid">${pend.map(i=>card(i,false)).join('')}</div>`;
   if(res.length)h+=`<div class="sh"><span class="st">Resolvidos neste lote</span><span class="ss">${res.length} foto(s)</span></div><div class="grid">${res.map(i=>card(i,true)).join('')}</div>`;
-  if(!h)h='<div class="es"><h2>Lote concluído</h2><p>Clique em <strong>▶ Processar próximos 10</strong> para continuar.</p></div>';
+  if(!h)h='<div class="es"><h2>Lote concluído</h2><p>Clique em <strong>▶ Processar próximos 15</strong> para continuar.</p></div>';
   mc.innerHTML=h;
 }
 
@@ -930,11 +933,14 @@ function card(it,res){
     ${pasteZone(it,linked||sel)}`;
   } else {
     const L={APROVADO:'✓ Aprovado',REPROVADO:'✗ Reprovado',PRECISA_DE_NOVA_FOTO:'↻ Nova foto',PRECISA_DE_AJUSTE:'✎ Ajuste'};
+    // Link para o produto na loja Shopify (se enviado)
+    const shopLink=(it.status==='APROVADO'&&it.shopify_product_id)?`<a class="shop-link" href="https://sthtec-5u.myshopify.com/admin/products/${String(it.shopify_product_id).replace('gid://shopify/Product/','')}" target="_blank">🛍️ Ver na loja Shopify →</a>`:'';
+    const enviadoBadge=it.enviado_shopify?`<div class="enviado-badge">✓ Na loja Shopify</div>`:'';
     // Botão de salvar/aprovar também em resolvidos (menos os já aprovados)
     const aprovarBtn=it.status!=='APROVADO'?`<button class="aa" style="width:100%;margin-top:6px" onclick="aprovar(${it.id})">✓ Salvar e Aprovar produto</button>`:'';
     const reprovarBtn=it.status!=='REPROVADO'?`<button class="arj" style="width:100%;margin-top:6px" onclick="acao(${it.id},'REPROVAR')">✗ Reprovar</button>`:'';
     actH=`<div class="res-l">${L[it.status]||it.status}</div>
-    ${aprovarBtn}${reprovarBtn}
+    ${enviadoBadge}${shopLink}${aprovarBtn}${reprovarBtn}
     <button class="btn-editar-tudo" onclick="togEd(${it.id})">✏️ ${EOPEN[it.id]?'Fechar edição':'Editar tudo'}</button>
     ${pasteZone(it,it.shopify_product_id)}`;
   }
@@ -1076,7 +1082,7 @@ async function processarProximos10(){
     setTab('revisao');
     await atualizarContagens();
   }catch(err){log('Erro: '+err.message,'er');}
-  finally{busy=false;btn.disabled=false;btn.textContent='▶ Processar próximos 10';}
+  finally{busy=false;btn.disabled=false;btn.textContent='▶ Processar próximos 15';}
 }
 
 // ── Edit ──────────────────────────────────────────────────────────────────────
@@ -1253,6 +1259,15 @@ async function exec(id,body){
     if(r.error==='aprovacao_bloqueada'){log('Bloqueado: '+r.reason,'er');alert('Não pode aprovar: '+r.reason);return;}
     if(r.error){log('Erro: '+r.error,'er');return;}
     log(`Item ${id}: ${r.status}`,r.status==='APROVADO'?'ok':'');
+    // Ao APROVAR: envia automaticamente para a loja Shopify
+    if(body.action==='APROVAR'){
+      log(`Enviando item ${id} para a loja Shopify…`);
+      try{
+        const ps=await api('push-to-shopify',{method:'POST',body:JSON.stringify({item_id:id})});
+        if(ps.error)log(`Shopify: ${ps.error}`,'er');
+        else log(`✓ ${ps.msg}${ps.image_attached?' (com foto)':''}`,'ok');
+      }catch(e){log('Erro Shopify: '+e.message,'er');}
+    }
     // Ações que mudam o item de aba: remove o card da tela com animação
     const MOVE_ACTIONS=['REPROVAR','APROVAR','SOLICITAR_NOVA_FOTO'];
     if(MOVE_ACTIONS.includes(body.action)){

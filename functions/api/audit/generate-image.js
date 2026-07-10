@@ -6,15 +6,19 @@
 
 import { jsonResponse, corsPreflight, requireAuth, fetchThumbnailAsBase64 } from './_shared.js';
 
-const PROMPT = `Keep the product in this photo EXACTLY as it is — do not redraw, restructure or reinterpret it. Same exact beads (same count, colors, sizes and order), same chain, same medals, same crucifix, same pendant, same layout and proportions. Treat the product as a fixed object that must be copied pixel-faithfully.
+const PROMPT = `Reproduce the exact product from this photo as a premium e-commerce product photograph. The product itself must stay 100% identical — same figure, same face, same colors, same gold/blue/pearl details, same crown, same base, same engravings, same proportions and same size. Copy it faithfully like a photograph, do NOT redraw, redesign or reinterpret any part of it.
 
-Only replace the background and lighting: place the untouched product on a light warm-white marble surface with a few blurred eucalyptus branches at the far edges, soft natural side daylight, cream and ivory tones, House of Joppa style.
+BACKGROUND AND STYLE (match this exact look):
+Place the product on a light cream travertine or warm-white marble surface with soft natural texture. In the background, softly blurred out of focus, add a few delicate green eucalyptus or olive branches on one side. Bright, airy, luminous scene with warm cream and ivory tones. Soft natural window daylight coming from the side, casting gentle soft shadows and delicate light patterns. Elegant, serene, reverent, high-end catholic boutique aesthetic (House of Joppa style).
 
-Remove any plastic packaging, price tag, sticker, ruler and clutter — show only the clean product.
+FRAMING (very important — never crop):
+Show the COMPLETE product fully inside the frame with comfortable empty space around every side. The entire product from top to bottom and side to side must be visible — crown, halo, base, hands, everything. Never cut off any part. Center the product as the clear hero. Keep the product's real proportions and real size feeling (a small statue looks small and delicate, a large one looks substantial).
 
-Show the COMPLETE product with margin around all edges — never crop any part. Keep the original photo orientation and the product's real proportions.
+CLEAN: remove any plastic packaging, price tag, sticker, label or clutter. Show only the clean product.
 
-Result must be a realistic photograph, not AI art: natural grain, true textures, real soft shadows. No CGI, no glow, no smoothing.`;
+PHOTOREALISM: real professional product photograph, full-frame camera, soft studio daylight. Natural textures (resin, gold leaf, pearls, enamel), realistic soft shadows and gentle reflections. No CGI, no digital-art glow, no oversaturation, no plastic smoothing. It must look like a genuine photo.
+
+Output one high-resolution photorealistic image of the complete uncropped product, beautifully staged.`;
 
 export async function onRequest(context) {
   const { request, env } = context;
