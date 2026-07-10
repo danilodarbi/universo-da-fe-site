@@ -63,6 +63,7 @@ main{padding:18px 20px;max-width:1500px;margin:0 auto}
 /* Lens modal */
 #lens-modal{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center}
 #lens-modal.show{display:flex}
+#editor-modal.show{display:flex !important}
 .lens-back{position:absolute;inset:0;background:rgba(0,0,0,.85)}
 .lens-content{position:relative;background:var(--surf);border:1px solid var(--border);border-radius:14px;width:min(500px,92vw);padding:24px}
 .lens-content h3{font-family:'Cormorant Garamond',serif;color:var(--gold);font-size:18px;margin-bottom:6px}
@@ -133,7 +134,7 @@ main{padding:18px 20px;max-width:1500px;margin:0 auto}
 </div>
 
 <!-- Editor de produto Shopify -->
-<div id="editor-modal" style="position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center">
+<div id="editor-modal" style="position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center" class="modal-hidden">
   <div class="lens-back" onclick="fecharEditor()"></div>
   <div class="lens-content" style="width:min(560px,94vw);max-height:92vh;overflow-y:auto">
     <button class="lens-close" onclick="fecharEditor()">✕</button>
