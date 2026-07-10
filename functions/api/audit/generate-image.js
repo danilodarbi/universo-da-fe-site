@@ -6,22 +6,31 @@
 
 import { jsonResponse, corsPreflight, requireAuth, fetchThumbnailAsBase64 } from './_shared.js';
 
-const PROMPT = `Recreate this exact product photo as a premium e-commerce image. Study the product carefully and copy it with total fidelity.
+const PROMPT = `You are editing a real product photo for a premium Catholic store catalog (House of Joppa aesthetic). Your ONLY job is to replace the background and lighting. The product must remain a perfect, unaltered copy of the original.
 
-THE PRODUCT MUST BE IDENTICAL TO THE ORIGINAL — copy it exactly:
-Same figure/saint, same face and expression, same exact colors, same gold/silver/blue/pearl details, same crown, same halo, same base, same engravings, same bead count and bead colors, same crucifix, same proportions and same relative sizes between parts. Do NOT redraw, redesign, beautify, restyle or reinterpret any part. Treat every detail of the product as fixed and untouchable — reproduce it faithfully like a photograph of the same object.
+═══ RULE #1 — THE PRODUCT IS FROZEN, COPY IT EXACTLY ═══
+Reproduce the product pixel-faithfully, as if it were cut out from the original photo and placed on a new background:
+• Same saint/figure, same face, same expression, same pose — do not redraw the face
+• Same exact colors on every part (do not shift gold, silver, blue, white, red, pearl tones)
+• Same crown, halo, base, hands, mantle, engravings and ornaments
+• Same bead count, bead colors, bead sizes, crucifix and medals (for rosaries)
+• ANY TEXT, LETTERS, WORDS or ENGRAVED INSCRIPTIONS must stay EXACTLY the same — do not change, translate, invent or blur letters. If the base says "N. SRA. APARECIDA", it must still say exactly that.
+• Same proportions and same relative sizes between all parts
+Do NOT beautify, restyle, smooth, "improve", modernize or reinterpret ANYTHING about the product. Treat it as a fixed, sacred object.
 
-SQUARE FRAMING — FIT THE WHOLE PRODUCT, NEVER CROP:
-The image is square. Fit the COMPLETE product inside the square with comfortable empty margin on all four sides (at least 12%). Every part must be fully visible — top of crown/halo down to the base, and both sides. For tall items (statues, rosaries), scale them down so they fit entirely in the square without touching or exiting any edge. Center the product as the hero. Keep its real proportions — a small delicate item stays small and delicate.
+═══ RULE #2 — SHOW THE COMPLETE PRODUCT, NEVER CROP ═══
+The frame is square. Fit the ENTIRE product inside with generous margin (15%) on all four sides. Everything visible: top of crown/halo to bottom of base, full width. For tall items, scale down so nothing touches or exits the edges. Center the product.
 
-CLEAN: remove plastic packaging, price tags, stickers, labels, rulers, hands and any clutter. Show only the clean product.
+═══ RULE #3 — CLEAN ═══
+Remove plastic packaging, price tags, stickers, labels, rulers, hands, backing cards and any clutter. Only the clean product remains.
 
-BACKGROUND (House of Joppa style):
-Light warm-white marble or cream travertine surface with soft natural veining. A few blurred green eucalyptus or olive branches softly out of focus at the far edges (never covering the product). Bright, airy, luminous, cream and ivory tones. Soft natural window daylight from one side with gentle soft shadows.
+═══ RULE #4 — BACKGROUND (House of Joppa signature) ═══
+Place the product on a light warm-white marble or cream travertine surface with subtle natural veining. Add a few soft, blurred green eucalyptus or olive branches at the far edges of the frame (out of focus, never covering the product). Bright, airy, luminous scene in cream, ivory and warm-white tones. Soft natural window daylight from one side, gentle diffused shadows, delicate light on the product.
 
-PHOTOREALISM: real professional product photograph, full-frame camera, soft daylight. Natural textures (resin, gold leaf, pearls, enamel, metal), realistic soft shadows and reflections. No CGI, no digital-art glow, no oversaturation, no plastic smoothing. Must look like a genuine photo.
+═══ RULE #5 — REAL PHOTO, NOT AI ═══
+Full-frame camera look, 50mm lens, professional product photography. Natural material textures (resin, gold leaf, pearls, enamel, painted details), physically-accurate soft shadows and reflections. No CGI, no digital-art glow, no oversaturation, no plastic smoothing, no painterly look. It must look like a genuine photograph.
 
-Output one square photorealistic image of the complete, uncropped, faithful product beautifully staged.`;
+Output one square, photorealistic image: the exact same product, complete and uncropped, on the beautiful clean background.`;
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -128,9 +137,9 @@ async function generateWithOpenAI(env, imageB64) {
   form.append('model', 'gpt-image-1');
   form.append('image', new Blob([bytes], { type: 'image/jpeg' }), 'original.jpg');
   form.append('prompt', PROMPT);
-  form.append('size', '1024x1024'); // tamanho fixo mais barato (auto pode escolher 1536 = mais caro)
-  form.append('quality', 'low'); // low ~R$0,10/img — a maioria sai boa; as que erram voce refaz
-  // input_fidelity removido: dobrava o custo dos tokens de entrada. Input 1600px ja garante fidelidade.
+  form.append('size', '1024x1024');
+  form.append('quality', 'medium'); // medium + fidelity = ~R$0,30, mantém produto e texto fiéis
+  form.append('input_fidelity', 'high'); // ESSENCIAL para não mudar o produto/gravações/texto
 
   const res = await fetch('https://api.openai.com/v1/images/edits', {
     method: 'POST',

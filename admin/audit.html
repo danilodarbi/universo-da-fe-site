@@ -434,7 +434,7 @@ async function gerarFotosLoteRevisao(){
   if(r.error||!r.items){log('Erro ao buscar itens','er');return;}
   const alvos=r.items.filter(i=>!i.imagem_enviada);
   if(!alvos.length){log('Todos estes já têm foto nova','er');return;}
-  if(!confirm(`Gerar fotos com IA para ${alvos.length} item(ns)? (~R$0,10 cada)`))return;
+  if(!confirm(`Gerar fotos com IA para ${alvos.length} item(ns)? (~R$0,30 cada, alta fidelidade)`))return;
   genBatchRunning=true;
   const btn=document.getElementById('btnGenLote');
   if(btn)btn.disabled=true;
